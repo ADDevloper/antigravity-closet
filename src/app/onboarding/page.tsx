@@ -37,6 +37,19 @@ export default function OnboardingFlow() {
     const [error, setError] = useState<string>('');
     const videoRef = useRef<HTMLVideoElement>(null);
     const [stream, setStream] = useState<MediaStream | null>(null);
+    const [isMobile, setIsMobile] = useState(false);
+
+    // Device detection
+    useEffect(() => {
+        const checkMobile = () => {
+            const userAgent = typeof window.navigator === "undefined" ? "" : navigator.userAgent;
+            const mobile = Boolean(userAgent.match(/Android|BlackBerry|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i)) || window.innerWidth < 768;
+            setIsMobile(mobile);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     // Initial Splash Timer
     useEffect(() => {
@@ -286,6 +299,10 @@ export default function OnboardingFlow() {
         // Here we would typically set a flag "hasSeenOnboarding" = true
         // then redirect to home
         localStorage.setItem("closet_has_onboarded", "true");
+
+        // Set cookie for Middleware access
+        document.cookie = "onboarding_complete=true; path=/; max-age=31536000; SameSite=Lax";
+
         router.push('/');
     };
 
@@ -531,22 +548,42 @@ export default function OnboardingFlow() {
                         </ul>
                     </div>
 
-                    <div className="flex flex-col gap-3 w-full">
+                    <div className="flex flex-col gap-4 w-full pt-2">
+                        {/* Camera Button - Primary on Mobile */}
                         <button
                             onClick={handleStartCamera}
-                            className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl shadow-lg hover:scale-[1.02] transition-transform flex items-center justify-center gap-2"
+                            className={`w-full font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 relative group ${isMobile
+                                ? 'bg-slate-900 text-white shadow-xl hover:scale-[1.02]'
+                                : 'bg-white border-2 border-slate-200 text-slate-600 hover:border-purple-300 hover:bg-slate-50'
+                                }`}
                         >
-                            Open Camera <ArrowRight size={18} />
+                            {isMobile && (
+                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-[10px] px-3 py-1 rounded-full uppercase tracking-widest font-bold shadow-md flex items-center gap-1">
+                                    <Sparkles size={8} /> Recommended
+                                </div>
+                            )}
+                            Open Camera <Camera size={18} className={isMobile ? "text-purple-300" : "text-slate-400 group-hover:text-purple-500"} />
                         </button>
 
-                        <label className="w-full bg-white border-2 border-slate-200 text-slate-700 font-bold py-4 rounded-xl hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.02] active:scale-95">
+                        {/* Upload Button - Primary on Desktop */}
+                        <label className={`w-full font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer relative group ${!isMobile
+                            ? 'bg-slate-900 text-white shadow-xl hover:scale-[1.02]'
+                            : 'bg-white border-2 border-slate-200 text-slate-600 hover:border-purple-300 hover:bg-slate-50'
+                            }`}>
+
+                            {!isMobile && (
+                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-[10px] px-3 py-1 rounded-full uppercase tracking-widest font-bold shadow-md flex items-center gap-1">
+                                    <Sparkles size={8} /> Recommended
+                                </div>
+                            )}
+
                             <input
                                 type="file"
                                 accept="image/*"
                                 onChange={handleFileUpload}
                                 className="hidden"
                             />
-                            Upload Photo <Upload size={18} />
+                            Upload Photo <Upload size={18} className={!isMobile ? "text-purple-300" : "text-slate-400 group-hover:text-purple-500"} />
                         </label>
                     </div>
                     <p className="text-xs text-slate-400">Don't worry - we'll let you retake if needed!</p>
@@ -825,7 +862,12 @@ export default function OnboardingFlow() {
 
                     <div className="space-y-3">
                         <button
-                            onClick={() => router.push('/closet?action=add-new')} // In real flow we might open a modal
+                            onClick={() => {
+                                // Mark onboarding as complete so middleware lets us pass
+                                localStorage.setItem("closet_has_onboarded", "true");
+                                document.cookie = "onboarding_complete=true; path=/; max-age=31536000; SameSite=Lax";
+                                router.push('/closet?action=add-new');
+                            }}
                             className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-700 transition-colors"
                         >
                             Add My First Item
