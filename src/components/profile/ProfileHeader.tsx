@@ -12,7 +12,7 @@ interface ProfileHeaderProps {
     outfitCount?: number;
     daysActive?: number;
     onUpdateName: (name: string) => Promise<void>;
-    onTabChange: (tab: 'colors') => void;
+    onTabChange: (tab: 'profile' | 'colors' | 'settings') => void;
 }
 
 export default function ProfileHeader({ user, pca, itemCount, outfitCount = 0, daysActive = 1, onUpdateName, onTabChange }: ProfileHeaderProps) {
@@ -66,13 +66,12 @@ export default function ProfileHeader({ user, pca, itemCount, outfitCount = 0, d
                         )}
 
                         {pca && (
-                            <button
-                                onClick={() => onTabChange('colors')}
-                                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold shadow-sm hover:scale-105 transition-transform"
+                            <div
+                                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold shadow-sm"
                             >
                                 <Sparkles size={12} />
                                 {getSeasonName(pca.recommendedSeason)}
-                            </button>
+                            </div>
                         )}
                     </div>
 

@@ -1,11 +1,18 @@
-import { ClothingItem, Outfit } from './db';
+import { ClothingItem, Outfit, getUserPreferences, UserProfile } from './db';
+import { ClosetSnapshot, createGapAnalysisPrompt } from './gapAnalysis';
 import { FASHION_KNOWLEDGE } from './fashionKnowledge';
 
 const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
 const VERTEX_PROJECT_ID = process.env.NEXT_PUBLIC_VERTEX_PROJECT_ID || '';
 const VERTEX_LOCATION = process.env.NEXT_PUBLIC_VERTEX_LOCATION || 'us-central1';
 
-// Try Google AI Studio API first (original implementation)
+// Native Gemini File Search URIs (Uploaded Knowledge Bases)
+// Update these URIs whenever you run `node src/scripts/upload-knowledge.js`
+const GLOBAL_KNOWLEDGE_URI = 'https://generativelanguage.googleapis.com/v1beta/files/etkj0ok086b7';
+const INDIAN_KNOWLEDGE_URI = 'https://generativelanguage.googleapis.com/v1beta/files/xzld3llnjcmk';
+
+// Use v1beta for native File API support
+const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 export async function analyzeClothingImage(apiKey: string = API_KEY, base64Image: string) {
     const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
@@ -90,9 +97,10 @@ export async function getFashionAdvice(
     closet: ClothingItem[],
     history: { role: 'user' | 'assistant'; content: string }[],
     userInput: string,
-    pcaProfile?: any // PCAProfile from db.ts
+    pcaProfile?: any, // PCAProfile from db.ts
+    userProfile?: UserProfile | null
 ) {
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const url = `${BASE_URL}/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
     const closetContext = closet.map(item => ({
         id: item.id,
@@ -133,8 +141,50 @@ export async function getFashionAdvice(
         `;
     }
 
+    // Build Learning Context
+    const prefs = await getUserPreferences();
+    const likedColors = Object.entries(prefs.colorStats).filter(([_, s]) => s > 0).map(([c]) => c);
+    const dislikedColors = Object.entries(prefs.colorStats).filter(([_, s]) => s < 0).map(([c]) => c);
+    const likedCombos = Object.entries(prefs.combinationStats).filter(([_, s]) => s > 0).map(([c]) => c);
+    const dislikedCombos = Object.entries(prefs.combinationStats).filter(([_, s]) => s < 0).map(([c]) => c);
+
+    const prefContext = `
+    ═══════════════════════════════════════════════════════════════════════════════
+    ## USER FEEDBACK & LEARNT PREFERENCES
+    ═══════════════════════════════════════════════════════════════════════════════
+    - LIKED COLORS: ${likedColors.join(', ') || 'N/A'}
+    - DISLIKED COLORS (AVOID): ${dislikedColors.join(', ') || 'N/A'}
+    - LIKED CATEGORY COMBOS: ${likedCombos.join(', ') || 'N/A'}
+    - DISLIKED CATEGORY COMBOS (AVOID): ${dislikedCombos.join(', ') || 'N/A'}
+
+    **INSTRUCTION**: Prioritize items and combinations the user likes. Avoid disliked ones. 
+    Actively mention insights like "I noticed you prefer ${likedColors[0] || 'certain colors'}..." when relevant.
+    `;
+
+    // Build User Profile Context
+    let userProfileContext = '';
+    if (userProfile) {
+        userProfileContext = `
+    ═══════════════════════════════════════════════════════════════════════════════
+    ## USER STYLE IDENTITY & LIFESTYLE
+    ═══════════════════════════════════════════════════════════════════════════════
+    Gender/Style Base: ${userProfile.gender || 'Not specified'}
+    Bio/Style Vibe: ${userProfile.bio || 'Not specified'}
+    
+    LIFESTYLE MIX:
+    - Work: ${userProfile.lifestyle?.work || 0}%
+    - Casual: ${userProfile.lifestyle?.casual || 0}%
+    - Athletic: ${userProfile.lifestyle?.athletic || 0}%
+    - Social: ${userProfile.lifestyle?.social || 0}%
+
+    **CRITICAL INSTRUCTION**: You MUST suggest outfits that match the user's Gender (${userProfile.gender}). 
+    If the user is Male, do NOT suggest dresses, skirts, or high heels unless explicitly asked.
+    Align your suggestions with their Lifestyle Mix (e.g., if Work is high, suggest more professional attire).
+        `;
+    }
+
     const systemPrompt = `
-    You are "Closet AI", a friendly personal fashion stylist and color theory expert.
+    You are "Closet AI", a professional personal fashion stylist and expert in both GLOBAL and INDIAN ethnic fashion.
     
     PERSONA:
     - Casual, warm, encouraging (like a fashion-savvy friend)
@@ -143,36 +193,40 @@ export async function getFashionAdvice(
     - Educational: teach color principles while styling
     - **EXTREMELY CONCISE**: You value brevity.
 
-    ${FASHION_KNOWLEDGE}
+    **KNOWLEDGE BASES**: You have access to TWO Fashion Knowledge Base files:
+    1. **Global Fashion Knowledge**: Covers core color theory, body types, and Western style rules.
+    2. **Indian Fashion Knowledge**: Covers Indian ethnic wear, festive styling, and traditional draping/combinations.
+    
+    Use BOTH to provide accurate, culturally relevant styling advice.
 
     ═══════════════════════════════════════════════════════════════════════════════
-    ## USER'S DIGITAL CLOSET
+    ## USER'S DIGITAL CLOSET, PREFERENCES & IDENTITY
     ═══════════════════════════════════════════════════════════════════════════════
     ${JSON.stringify(closetContext, null, 2)}
     ${pcaContext}
+    ${prefContext}
+    ${userProfileContext}
 
     ═══════════════════════════════════════════════════════════════════════════════
     ## YOUR TASK & RULES
     ═══════════════════════════════════════════════════════════════════════════════
 
-    1. **STRICT LENGTH LIMIT**: You MUST answer in maximum 3-4 sentences. Do NOT write paragraphs. Be direct and punchy. if you need to list items, use a simple comma-separated list or very brief bullets. Ensure the total response length is short.
+    1. **STRICT LENGTH LIMIT**: You MUST answer the text part in maximum 3-4 sentences. The JSON tags ([OUTFIT] and [RECO]) do NOT count towards this limit.
 
-    2. **Use Your Expert Knowledge**: Apply the color theory, body type principles, and styling rules above to give EXPERT advice.
+    2. **Use Both Knowledge Files**: Search and apply principles from both the Global and Indian fashion files.
     
-    3. **Briefly Explain Why**: Quickly mention color theory or PCA reasoning in 1 small sentence to justify your choice.
+    3. **Briefly Explain Why**: Quickly mention reasoning (color theory, cultural context, or PCA) in 1 small sentence.
     
-    4. **Only Use User's Closet**: ONLY suggest items that exist in the user's closet (using their IDs from the list above) - unless suggesting a specific missing item to buy.
+    4. **Only Use User's Closet**: Suggest items from their closet ID list.
     
-    5. **Provide Visual Outfit Suggestions**: Use this exact format:
-       [OUTFIT: {"name": "Summer Brunch Look", "description": "A light and breezy outfit...", "itemIds": [1, 5, 12], "stylingTips": ["Tuck the shirt", "Add a belt"]}]
+    5. **Visual Outfit Card (MANDATORY)**: Whenever you suggest a combination of items from the closet, you MUST include the Outfit card using this exact format:
+       [OUTFIT: {"name": "...", "description": "...", "itemIds": [...], "stylingTips": ["..."]}]
     
-    6. **PCA HANDLING RULES**:
-       - Mention if an item is "In-Palette" or how to style "Out-of-Palette" items (e.g., away from face). Keep it brief.
-       - If the question isn't about color, don't force PCA advice.
+    6. **Shopping Recommendation Card (OPTIONAL)**: If a key piece is missing to complete the look, suggest it in addition to the Outfit card:
+       [RECO: {"itemName": "...", "reason": "...", "colorSuggestion": "...", "searchQuery": "..."}]
+       *You can and should output BOTH an [OUTFIT] and a [RECO] in the same response if clothes from the closet are mentioned.*
 
-    7. **Identify Wardrobe Gaps**: If needed, briefly suggest missing items (e.g. "A gray blazer would complete this.")
-    
-    8. **Be Encouraging**: Build confidence efficiently. Use emojis occasionally (🌸, ✨).
+    7. **Encourage Mixed Styling**: Feel free to suggest "Indo-Western" looks if appropriate.
 
     Current user request: ${userInput}
   `;
@@ -182,12 +236,27 @@ export async function getFashionAdvice(
         parts: [{ text: h.content }]
     }));
 
+    // Add the files and the system prompt
     contents.push({
         role: 'user',
-        parts: [{ text: systemPrompt }]
-    });
+        parts: [
+            {
+                file_data: {
+                    mime_type: 'text/plain',
+                    file_uri: GLOBAL_KNOWLEDGE_URI
+                }
+            },
+            {
+                file_data: {
+                    mime_type: 'application/pdf',
+                    file_uri: INDIAN_KNOWLEDGE_URI
+                }
+            },
+            { text: systemPrompt }
+        ]
+    } as any);
 
-    const requestBody = {
+    const requestBody: any = {
         contents: contents
     };
 
@@ -218,9 +287,11 @@ export async function getFashionAdvice(
         const data = await response.json();
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-        // Extract outfits from text
+        // Extract outfits and recommendations from text
         const outfits: Outfit[] = [];
+        const recommendations: any[] = [];
         const outfitRegex = /\[OUTFIT: (\{.*?\})\]/g;
+        const recoRegex = /\[RECO: (\{.*?\})\]/g;
         let match;
         let cleanText = text;
 
@@ -237,9 +308,23 @@ export async function getFashionAdvice(
             }
         }
 
+        while ((match = recoRegex.exec(text)) !== null) {
+            try {
+                const recoData = JSON.parse(match[1]);
+                recommendations.push({
+                    ...recoData,
+                    id: Math.random().toString(36).substr(2, 9),
+                });
+                cleanText = cleanText.replace(match[0], '');
+            } catch (e) {
+                console.error('Failed to parse recommendation', match[1]);
+            }
+        }
+
         return {
             content: cleanText.trim(),
             outfits,
+            recommendations
         };
     } catch (error) {
         console.error('Error calling Gemini API:', error);
@@ -337,3 +422,55 @@ Return ONLY valid JSON, no markdown formatting.`;
     }
 }
 
+export async function performGapAnalysis(
+    snapshot: ClosetSnapshot,
+    profile: UserProfile,
+    apiKey: string = API_KEY
+) {
+    const url = `${BASE_URL}/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+    const prompt = createGapAnalysisPrompt(snapshot, profile);
+
+    const contents = [
+        {
+            role: 'user',
+            parts: [
+                {
+                    file_data: {
+                        mime_type: 'text/plain',
+                        file_uri: GLOBAL_KNOWLEDGE_URI
+                    }
+                },
+                { text: prompt }
+            ]
+        }
+    ];
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ contents })
+        });
+
+        if (!response.ok) {
+            throw new Error(`API Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+        try {
+            const jsonStr = text.match(/\{[\s\S]*\}/)?.[0] || text;
+            return JSON.parse(jsonStr);
+        } catch (e) {
+            console.error('Failed to parse Gap Analysis response', text);
+            return null;
+        }
+    } catch (error) {
+        console.error('Error in performGapAnalysis:', error);
+        throw error;
+    }
+}

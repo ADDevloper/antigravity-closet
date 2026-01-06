@@ -25,6 +25,9 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -34,6 +37,7 @@ export default function RootLayout({
     <html lang="en">
       <body suppressHydrationWarning className={`${inter.variable} ${poppins.variable} font-sans antialiased bg-slate-50 text-slate-900`}>
         {children}
+        <ToastContainer position="bottom-right" autoClose={3000} />
       </body>
     </html>
   );

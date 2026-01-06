@@ -13,10 +13,19 @@ export interface ClothingItem {
   createdAt: number;
 }
 
+export interface Recommendation {
+  id: string;
+  itemName: string;
+  reason: string;
+  colorSuggestion: string;
+  searchQuery: string;
+}
+
 export interface Message {
   role: 'user' | 'assistant';
   content: string;
   outfits?: Outfit[];
+  recommendations?: Recommendation[];
   timestamp: number;
 }
 
@@ -27,6 +36,7 @@ export interface Outfit {
   itemIds: number[];
   rating?: 'up' | 'down';
   isFavorite?: boolean;
+  stylingTips?: string[];
 }
 
 export interface Conversation {
@@ -43,6 +53,23 @@ export interface PlannedOutfit {
   itemIds: number[];
   notes?: string;
   createdAt: number;
+}
+
+export interface OutfitRating {
+  id?: number; // IndexedDB ID
+  outfitId: string; // Generated ID in chat
+  rating: 'up' | 'down';
+  outfit: Outfit;
+  timestamp: number;
+}
+
+export interface UserPreferences {
+  id: string; // "current"
+  colorStats: Record<string, number>; // Positive for likes, negative for dislikes
+  itemStats: Record<number, number>;
+  styleStats: Record<string, number>;
+  combinationStats: Record<string, number>; // e.g. "shirt+jeans"
+  updatedAt: number;
 }
 
 export type ColorSeason = 'warm_spring' | 'cool_summer' | 'warm_autumn' | 'cool_winter';
@@ -108,6 +135,22 @@ interface ClosetDB extends DBSchema {
     key: string;
     value: UserSettings;
   };
+  outfitRatings: {
+    key: number;
+    value: OutfitRating;
+    indexes: { 'by-rating': string };
+  };
+  userPreferences: {
+    key: string;
+    value: UserPreferences;
+  };
+}
+
+export interface Lifestyle {
+  work: number;
+  casual: number;
+  athletic: number;
+  social: number;
 }
 
 export interface UserProfile {
@@ -116,6 +159,8 @@ export interface UserProfile {
   email?: string;
   bio?: string;
   avatar?: string;
+  gender?: 'male' | 'female';
+  lifestyle?: Lifestyle;
   createdAt: number;
 }
 
@@ -170,7 +215,7 @@ export interface UserSettings {
 }
 
 const DB_NAME = 'clothing-closet-v2';
-const DB_VERSION = 3; // Increment version for schema change
+const DB_VERSION = 4; // Increment version for ratings & preferences
 
 let dbPromise: Promise<IDBPDatabase<ClosetDB>> | null = null;
 
@@ -223,6 +268,20 @@ export const getDB = () => {
           }
           if (!db.objectStoreNames.contains('userSettings')) {
             db.createObjectStore('userSettings', { keyPath: 'id' });
+          }
+        }
+
+        // Ratings & Preferences (v4)
+        if (oldVersion < 4) {
+          if (!db.objectStoreNames.contains('outfitRatings')) {
+            const ratingStore = db.createObjectStore('outfitRatings', {
+              keyPath: 'id',
+              autoIncrement: true,
+            });
+            ratingStore.createIndex('by-rating', 'rating');
+          }
+          if (!db.objectStoreNames.contains('userPreferences')) {
+            db.createObjectStore('userPreferences', { keyPath: 'id' });
           }
         }
       },
@@ -432,5 +491,103 @@ export const DEFAULT_SETTINGS: Omit<UserSettings, 'id'> = {
     reduceAnimations: false,
     textSize: 'Medium'
   }
+};
+
+// Outfit Ratings Helpers
+export const addOutfitRating = async (rating: OutfitRating) => {
+  const db = await getDB();
+  if (!db) return;
+  const id = await db.add('outfitRatings', rating);
+
+  // Also update cumulative preferences
+  await calculatePreferencesFromRating(rating);
+
+  return id;
+};
+
+export const getLikedOutfits = async () => {
+  const db = await getDB();
+  if (!db) return [];
+  // Filter for 'up' ratings manually if needed, or use index
+  return db.getAllFromIndex('outfitRatings', 'by-rating', 'up');
+};
+
+export const removeOutfitRating = async (id: number) => {
+  const db = await getDB();
+  if (!db) return;
+  return db.delete('outfitRatings', id);
+};
+
+export const deleteRatingByOutfitId = async (outfitId: string) => {
+  const db = await getDB();
+  if (!db) return;
+  const ratings = await db.getAll('outfitRatings');
+  const target = ratings.find(r => r.outfitId === outfitId);
+  if (target?.id) {
+    return db.delete('outfitRatings', target.id);
+  }
+};
+
+// User Preferences Helpers
+export const getUserPreferences = async (): Promise<UserPreferences> => {
+  const db = await getDB();
+  const defaultPrefs: UserPreferences = {
+    id: 'current',
+    colorStats: {},
+    itemStats: {},
+    styleStats: {},
+    combinationStats: {},
+    updatedAt: Date.now()
+  };
+
+  if (!db) return defaultPrefs;
+  const result = await db.get('userPreferences', 'current');
+  return result || defaultPrefs;
+};
+
+export const saveUserPreferences = async (prefs: UserPreferences) => {
+  const db = await getDB();
+  if (!db) return;
+  prefs.id = 'current';
+  prefs.updatedAt = Date.now();
+  return db.put('userPreferences', prefs);
+};
+
+const calculatePreferencesFromRating = async (rating: OutfitRating) => {
+  const prefs = await getUserPreferences();
+  const weight = rating.rating === 'up' ? 1 : -1;
+  const items = await getAllItems();
+  const itemMap = new Map(items.map(i => [i.id!, i]));
+
+  // Update item frequencies
+  rating.outfit.itemIds.forEach(id => {
+    prefs.itemStats[id] = (prefs.itemStats[id] || 0) + weight;
+
+    // Update color frequencies
+    const item = itemMap.get(id);
+    if (item) {
+      item.colors.forEach(color => {
+        const c = color.toLowerCase();
+        prefs.colorStats[c] = (prefs.colorStats[c] || 0) + weight;
+      });
+    }
+  });
+
+  // Update combinations
+  if (rating.outfit.itemIds.length > 1) {
+    const categories = rating.outfit.itemIds
+      .map(id => itemMap.get(id)?.category)
+      .filter(Boolean)
+      .sort();
+
+    for (let i = 0; i < categories.length; i++) {
+      for (let j = i + 1; j < categories.length; j++) {
+        const combo = `${categories[i]}+${categories[j]}`;
+        prefs.combinationStats[combo] = (prefs.combinationStats[combo] || 0) + weight;
+      }
+    }
+  }
+
+  await saveUserPreferences(prefs);
 };
 

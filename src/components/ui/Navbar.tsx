@@ -16,7 +16,6 @@ export default function Navbar({ onAddClick }: NavbarProps) {
         { href: "/chat", label: "Assistant", icon: MessageSquare },
         { href: "/closet", label: "Closet", icon: Shirt },
         { href: "/calendar", label: "Plan", icon: Calendar },
-        { href: "/pca", label: "Colors", icon: Palette },
         { href: "/profile", label: "Me", icon: User },
     ];
 

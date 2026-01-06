@@ -6,7 +6,9 @@ import { isColorInPalette } from "@/lib/pcaUtils";
 import ItemCard from "@/components/closet/ItemCard";
 import ItemForm from "@/components/closet/ItemForm";
 import AppWrapper from "@/components/layout/AppWrapper";
-import { Search, Filter, Loader2, X, SlidersHorizontal, Sparkles } from "lucide-react";
+import { Search, Filter, Loader2, X, SlidersHorizontal, Sparkles, Heart } from "lucide-react";
+import LikedOutfitsSection from "@/components/closet/LikedOutfitsSection";
+import WardrobeHealth from "@/components/closet/WardrobeHealth";
 
 export default function ClosetPage() {
     const [items, setItems] = useState<ClothingItem[]>([]);
@@ -17,6 +19,7 @@ export default function ClosetPage() {
     const [search, setSearch] = useState("");
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
     const [pcaProfile, setPcaProfile] = useState<PCAProfile | null>(null);
+    const [showLikedOnly, setShowLikedOnly] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -140,6 +143,18 @@ export default function ClosetPage() {
                                 {occasions.map(o => <option key={o} value={o}>{o}</option>)}
                             </select>
 
+                            {/* Liked Outfits Toggle */}
+                            <button
+                                onClick={() => setShowLikedOnly(!showLikedOnly)}
+                                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all border-2 border-transparent whitespace-nowrap ${showLikedOnly
+                                    ? 'bg-rose-500 text-white shadow-lg shadow-rose-200'
+                                    : 'bg-rose-50 text-rose-700 hover:border-rose-200'
+                                    }`}
+                            >
+                                <Heart size={14} className={showLikedOnly ? "fill-current" : ""} />
+                                {showLikedOnly ? "My Closet" : "Liked Outfits"}
+                            </button>
+
                             {(filter.category || filter.occasion || filter.season || filter.brand || filter.size || showPaletteOnly) && (
                                 <button
                                     onClick={() => {
@@ -193,45 +208,54 @@ export default function ClosetPage() {
                     )}
                 </section>
 
-                {loading ? (
-                    <div className="flex flex-col items-center justify-center py-20 gap-4">
-                        <div className="relative">
-                            <Loader2 className="animate-spin text-purple-600" size={48} />
-                            <div className="absolute inset-0 bg-purple-500/10 rounded-full blur-xl animate-pulse" />
-                        </div>
-                        <p className="text-slate-400 font-bold tracking-wide">ORGANIZING YOUR WARDROBE...</p>
-                    </div>
-                ) : filteredItems.length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                        {filteredItems.map(item => (
-                            <ItemCard
-                                key={item.id}
-                                item={item}
-                                onDelete={handleDelete}
-                                onEdit={setEditingItem}
-                                inPalette={pcaProfile ? isColorInPalette(item.colors, pcaProfile.bestColors) : false}
-                            />
-                        ))}
-                    </div>
+                {showLikedOnly ? (
+                    <LikedOutfitsSection />
                 ) : (
-                    <div className="bg-white rounded-3xl p-20 text-center border-2 border-dashed border-slate-100 flex flex-col items-center">
-                        <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center text-slate-200 mb-6 shadow-inner">
-                            <Search size={48} />
-                        </div>
-                        <h3 className="font-poppins font-bold text-2xl text-slate-900">Your filters found nothing</h3>
-                        <p className="text-slate-500 max-w-sm mt-3 font-medium">
-                            Try broadening your search or resetting the filters to see your full collection.
-                        </p>
-                        <button
-                            onClick={() => {
-                                setFilter({ category: "", occasion: "", season: "", brand: "", size: "" });
-                                setShowPaletteOnly(false);
-                            }}
-                            className="mt-8 px-8 py-3 bg-purple-600 text-white rounded-2xl font-bold shadow-xl shadow-purple-100 hover:bg-purple-700 transition-all active:scale-95"
-                        >
-                            Reset All Filters
-                        </button>
-                    </div>
+                    <>
+                        {/* Gap Analysis Dashboard */}
+                        {!loading && items.length > 0 && <WardrobeHealth />}
+
+                        {loading ? (
+                            <div className="flex flex-col items-center justify-center py-20 gap-4">
+                                <div className="relative">
+                                    <Loader2 className="animate-spin text-purple-600" size={48} />
+                                    <div className="absolute inset-0 bg-purple-500/10 rounded-full blur-xl animate-pulse" />
+                                </div>
+                                <p className="text-slate-400 font-bold tracking-wide">ORGANIZING YOUR WARDROBE...</p>
+                            </div>
+                        ) : filteredItems.length > 0 ? (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                                {filteredItems.map(item => (
+                                    <ItemCard
+                                        key={item.id}
+                                        item={item}
+                                        onDelete={handleDelete}
+                                        onEdit={setEditingItem}
+                                        inPalette={pcaProfile ? isColorInPalette(item.colors, pcaProfile.bestColors) : false}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="bg-white rounded-3xl p-20 text-center border-2 border-dashed border-slate-100 flex flex-col items-center">
+                                <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center text-slate-200 mb-6 shadow-inner">
+                                    <Search size={48} />
+                                </div>
+                                <h3 className="font-poppins font-bold text-2xl text-slate-900">Your filters found nothing</h3>
+                                <p className="text-slate-500 max-w-sm mt-3 font-medium">
+                                    Try broadening your search or resetting the filters to see your full collection.
+                                </p>
+                                <button
+                                    onClick={() => {
+                                        setFilter({ category: "", occasion: "", season: "", brand: "", size: "" });
+                                        setShowPaletteOnly(false);
+                                    }}
+                                    className="mt-8 px-8 py-3 bg-purple-600 text-white rounded-2xl font-bold shadow-xl shadow-purple-100 hover:bg-purple-700 transition-all active:scale-95"
+                                >
+                                    Reset All Filters
+                                </button>
+                            </div>
+                        )}
+                    </>
                 )}
 
                 {editingItem && (

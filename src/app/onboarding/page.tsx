@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Palette, Camera, Sparkles, ArrowRight, ArrowLeft, Shirt, Plus, MessageCircle, X, Check, Info, Upload } from 'lucide-react';
 import { PCA_QUESTIONS, calculateQuizSeason, getSeasonData, getSeasonName, getSeasonDescription, QuizAnswers } from '@/lib/pcaUtils';
 import { analyzePCAImage } from '@/lib/gemini';
@@ -19,13 +19,28 @@ type Step =
     | 'analyzing'
     | 'conflict'
     | 'results'
+    | 'identity'
+    | 'lifestyle'
     | 'closet-transition'
     | 'closet-onboarding'
-    | 'add-first-item'; // After this, we go to main app
+    | 'add-first-item';
+
+function StepWrapper({ children, className = "" }: { children: React.ReactNode, className?: string }) {
+    return (
+        <div className="min-h-screen bg-slate-100 flex items-center justify-center font-sans p-0 md:p-4">
+            <div className={`w-full max-w-md h-screen md:h-[800px] bg-white md:rounded-[3rem] md:shadow-2xl overflow-hidden relative md:border-[12px] md:border-slate-900 flex flex-col ${className}`}>
+                {children}
+            </div>
+        </div>
+    );
+}
 
 export default function OnboardingFlow() {
     const router = useRouter();
-    const [step, setStep] = useState<Step>('splash');
+    const searchParams = useSearchParams();
+    const initialStep = searchParams.get('step') as Step;
+
+    const [step, setStep] = useState<Step>(initialStep || 'splash');
 
     // PCA State
     const [quizAnswers, setQuizAnswers] = useState<Partial<QuizAnswers>>({});
@@ -38,6 +53,15 @@ export default function OnboardingFlow() {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [stream, setStream] = useState<MediaStream | null>(null);
     const [isMobile, setIsMobile] = useState(false);
+
+    // Identity & Lifestyle State
+    const [gender, setGender] = useState<'male' | 'female' | null>(null);
+    const [lifestyle, setLifestyle] = useState({
+        work: 40,
+        casual: 30,
+        athletic: 15,
+        social: 15
+    });
 
     // Device detection
     useEffect(() => {
@@ -295,14 +319,24 @@ export default function OnboardingFlow() {
         setStep('results');
     };
 
-    const handleFinishOnboarding = () => {
-        // Here we would typically set a flag "hasSeenOnboarding" = true
-        // then redirect to home
+    const handleFinishOnboarding = async () => {
+        // Save Profile Data
+        const saveProfile = async () => {
+            const { saveUserProfile, getUserProfile } = await import('@/lib/db');
+            const existing = await getUserProfile();
+            await saveUserProfile({
+                ...(existing || {}),
+                id: 'current',
+                name: existing?.name || 'User',
+                gender: gender || 'female',
+                lifestyle: lifestyle,
+                createdAt: existing?.createdAt || Date.now()
+            } as any);
+        };
+        await saveProfile();
+
         localStorage.setItem("closet_has_onboarded", "true");
-
-        // Set cookie for Middleware access
         document.cookie = "onboarding_complete=true; path=/; max-age=31536000; SameSite=Lax";
-
         router.push('/');
     };
 
@@ -336,8 +370,8 @@ export default function OnboardingFlow() {
     // 2. Welcome Screen
     if (step === 'welcome') {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-[2rem] shadow-xl p-8 max-w-md w-full text-center space-y-8 animate-fade-in relative overflow-hidden">
+            <StepWrapper>
+                <div className="bg-white p-8 text-center space-y-8 animate-fade-in relative overflow-hidden h-full flex flex-col justify-center">
                     <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-purple-500 to-pink-500"></div>
 
                     <div className="space-y-2 pt-4">
@@ -383,15 +417,15 @@ export default function OnboardingFlow() {
                         <p className="text-xs text-slate-400">Ready to find your best colors?</p>
                     </div>
                 </div>
-            </div>
+            </StepWrapper>
         );
     }
 
     // 3. PCA Intro
     if (step === 'pca-intro') {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-[2rem] shadow-xl p-8 max-w-md w-full space-y-8 animate-fade-in relative">
+            <StepWrapper className="bg-gradient-to-br from-purple-50 to-pink-50">
+                <div className="p-8 h-full flex flex-col justify-center space-y-8 animate-fade-in relative">
                     <button onClick={() => setStep('welcome')} className="absolute top-6 left-6 text-slate-400 hover:text-slate-900"><ArrowLeft size={20} /></button>
 
                     <div className="text-center space-y-4 pt-8">
@@ -406,7 +440,7 @@ export default function OnboardingFlow() {
 
                     <div className="grid grid-cols-2 gap-3">
                         {['Warm Spring 🌸', 'Cool Summer 🌊', 'Warm Autumn 🍂', 'Cool Winter ❄️'].map(s => (
-                            <div key={s} className="bg-slate-50 p-3 rounded-xl text-center text-xs font-medium text-slate-600 border border-slate-100">
+                            <div key={s} className="bg-white p-3 rounded-xl text-center text-xs font-medium text-slate-600 border border-slate-100">
                                 {s}
                             </div>
                         ))}
@@ -424,7 +458,7 @@ export default function OnboardingFlow() {
                             <span className="text-lg">📸</span>
                             <div className="flex-1">
                                 <div className="text-sm font-semibold">Step 2: Selfie</div>
-                                <div className="text-xs text-slate-400">Natural light photo</div>
+                                <div className="text-xs text-slate-400">AI analysis</div>
                             </div>
                         </div>
                         <div className="flex items-center gap-3 bg-white border border-slate-100 p-3 rounded-lg shadow-sm">
@@ -447,7 +481,7 @@ export default function OnboardingFlow() {
                         💕 Remember: These are helpful guidelines, not rules! Wear what makes you confident.
                     </p>
                 </div>
-            </div>
+            </StepWrapper>
         );
     }
 
@@ -457,9 +491,8 @@ export default function OnboardingFlow() {
         const progress = ((currentQuestionIndex + 1) / 8) * 100;
 
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-[2rem] shadow-xl p-8 max-w-md w-full h-[600px] flex flex-col animate-fade-in relative">
-
+            <StepWrapper>
+                <div className="bg-white p-8 h-full flex flex-col animate-fade-in relative">
                     {/* Header */}
                     <div className="space-y-4 mb-6">
                         <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -472,7 +505,7 @@ export default function OnboardingFlow() {
                     </div>
 
                     {/* Content */}
-                    <div className="flex-1 overflow-y-auto">
+                    <div className="flex-1 overflow-y-auto scrollbar-none">
                         <h3 className="text-xl font-bold text-slate-900 mb-6 font-poppins leading-snug">
                             {currentQ.question}
                         </h3>
@@ -501,15 +534,15 @@ export default function OnboardingFlow() {
                         </button>
                     </div>
                 </div>
-            </div>
+            </StepWrapper>
         );
     }
 
     // 5. Quiz Transition
     if (step === 'quiz-transition') {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-                <div className="text-center space-y-6 animate-scale-in">
+            <StepWrapper>
+                <div className="h-full flex flex-col items-center justify-center text-center space-y-6 animate-scale-in">
                     <div className="w-24 h-24 mx-auto bg-green-100 rounded-full flex items-center justify-center">
                         <Check className="w-12 h-12 text-green-600 animate-bounce-short" />
                     </div>
@@ -518,15 +551,15 @@ export default function OnboardingFlow() {
                         <p className="text-slate-500">Now let's take your selfie...</p>
                     </div>
                 </div>
-            </div>
+            </StepWrapper>
         );
     }
 
     // 6. Selfie Intro
     if (step === 'selfie-intro') {
         return (
-            <div className="min-h-screen bg-white flex items-center justify-center p-4">
-                <div className="bg-white rounded-[2rem] shadow-lg p-8 max-w-md w-full text-center space-y-8 animate-fade-in border border-slate-100">
+            <StepWrapper>
+                <div className="bg-white p-8 h-full flex flex-col items-center justify-center text-center space-y-8 animate-fade-in">
                     <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden mb-4">
                         <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500 w-2/3"></div>
                     </div>
@@ -538,7 +571,7 @@ export default function OnboardingFlow() {
 
                     <h2 className="text-2xl font-bold text-slate-900 font-poppins">Take Your Selfie</h2>
 
-                    <div className="bg-slate-50 text-left p-5 rounded-2xl space-y-3">
+                    <div className="bg-slate-50 text-left p-5 rounded-2xl space-y-3 w-full">
                         <p className="font-bold text-slate-800 text-sm">For the best analysis:</p>
                         <ul className="space-y-2 text-sm text-slate-600">
                             <li className="flex items-center gap-2">☀️ Natural daylight (near a window)</li>
@@ -588,7 +621,7 @@ export default function OnboardingFlow() {
                     </div>
                     <p className="text-xs text-slate-400">Don't worry - we'll let you retake if needed!</p>
                 </div>
-            </div>
+            </StepWrapper>
         );
     }
 
@@ -646,9 +679,9 @@ export default function OnboardingFlow() {
     // 8. Photo Preview
     if (step === 'photo-preview') {
         return (
-            <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
-                <div className="w-full max-w-md space-y-6">
-                    <div className="relative rounded-2xl overflow-hidden shadow-2xl aspect-[3/4]">
+            <StepWrapper className="bg-black">
+                <div className="flex-1 flex flex-col items-center justify-center p-4 space-y-6">
+                    <div className="w-full relative rounded-2xl overflow-hidden shadow-2xl aspect-[3/4]">
                         <img src={selfieDataUrl} alt="Preview" className="w-full h-full object-cover" />
                         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-6 text-white">
                             <div className="flex items-center gap-2 mb-1">
@@ -659,12 +692,12 @@ export default function OnboardingFlow() {
                     </div>
 
                     {error && (
-                        <div className="bg-red-500/20 text-red-100 p-4 rounded-xl text-center text-sm border border-red-500/50">
+                        <div className="w-full bg-red-500/20 text-red-100 p-4 rounded-xl text-center text-sm border border-red-500/50">
                             {error}
                         </div>
                     )}
 
-                    <div className="flex gap-4">
+                    <div className="w-full flex gap-4">
                         <button
                             onClick={handleRetake}
                             className="flex-1 py-4 rounded-xl bg-white/10 text-white font-medium hover:bg-white/20 transition-colors backdrop-blur-md"
@@ -679,39 +712,40 @@ export default function OnboardingFlow() {
                         </button>
                     </div>
                 </div>
-            </div>
+            </StepWrapper>
         );
     }
 
     // 9. Analyzing
     if (step === 'analyzing') {
-        // Fun facts rotator could go here
         return (
-            <div className="min-h-screen bg-white flex flex-col items-center justify-center p-8 text-center space-y-8">
-                <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-tr from-purple-500 to-pink-500 rounded-full blur-xl opacity-30 animate-pulse"></div>
-                    <div className="w-24 h-24 border-4 border-slate-100 border-t-purple-600 rounded-full animate-spin relative z-10"></div>
-                </div>
+            <StepWrapper className="bg-white">
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-8">
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-gradient-to-tr from-purple-500 to-pink-500 rounded-full blur-xl opacity-30 animate-pulse"></div>
+                        <div className="w-24 h-24 border-4 border-slate-100 border-t-purple-600 rounded-full animate-spin relative z-10"></div>
+                    </div>
 
-                <div className="space-y-2">
-                    <h2 className="text-2xl font-bold font-poppins text-slate-900">Analyzing your colors...</h2>
-                    <p className="text-slate-500">This will take just a moment ✨</p>
-                </div>
+                    <div className="space-y-2">
+                        <h2 className="text-2xl font-bold font-poppins text-slate-900">Analyzing your colors...</h2>
+                        <p className="text-slate-500">This will take just a moment ✨</p>
+                    </div>
 
-                <div className="bg-purple-50 p-6 rounded-2xl max-w-xs mx-auto">
-                    <p className="text-purple-800 text-sm italic">
-                        "Did you know? The right colors can make you look more awake, younger, and healthier!"
-                    </p>
+                    <div className="bg-purple-50 p-6 rounded-2xl w-full max-w-xs mx-auto">
+                        <p className="text-purple-800 text-sm italic">
+                            "Did you know? The right colors can make you look more awake, younger, and healthier!"
+                        </p>
+                    </div>
                 </div>
-            </div>
+            </StepWrapper>
         );
     }
 
     // 9b. Conflict
     if (step === 'conflict' && conflictData) {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-[2rem] shadow-xl p-8 max-w-md w-full space-y-6 animate-fade-in">
+            <StepWrapper>
+                <div className="p-8 h-full flex flex-col justify-center space-y-6 animate-fade-in">
                     <div className="text-center">
                         <span className="text-4xl block mb-2">🤔</span>
                         <h2 className="text-2xl font-bold text-slate-900">We found two possibilities!</h2>
@@ -746,7 +780,7 @@ export default function OnboardingFlow() {
                         </button>
                     </div>
                 </div>
-            </div>
+            </StepWrapper>
         );
     }
 
@@ -754,10 +788,8 @@ export default function OnboardingFlow() {
     if (step === 'results' && pcaResult) {
         const seasonData = getSeasonData(pcaResult.recommendedSeason);
         return (
-            <div className="min-h-screen bg-slate-50 overflow-y-auto pb-20">
-                <div className="bg-white min-h-screen relative animate-fade-in">
-                    {/* Confetti effect (CSS based or simplified) */}
-
+            <StepWrapper className="bg-white">
+                <div className="flex-1 overflow-y-auto scrollbar-none animate-fade-in">
                     {/* Header bg */}
                     <div className="bg-slate-900 pt-16 pb-24 px-8 text-center rounded-b-[2.5rem] relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
@@ -766,7 +798,7 @@ export default function OnboardingFlow() {
                             <div className="inline-block px-4 py-1.5 rounded-full bg-white/10 text-white/90 text-xs font-bold backdrop-blur-md border border-white/10">
                                 🎉 It's a match!
                             </div>
-                            <h1 className="text-4xl md:text-5xl font-bold text-white font-poppins">
+                            <h1 className="text-4xl font-bold text-white font-poppins">
                                 You're a <br />
                                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
                                     {getSeasonName(pcaResult.recommendedSeason)}
@@ -779,7 +811,7 @@ export default function OnboardingFlow() {
                     </div>
 
                     {/* Content Cards */}
-                    <div className="px-6 -mt-12 relative z-20 space-y-6 max-w-lg mx-auto">
+                    <div className="px-6 -mt-12 relative z-20 space-y-6">
                         {/* Best Colors */}
                         <div className="bg-white rounded-2xl shadow-xl p-6 space-y-4">
                             <h3 className="font-bold text-slate-900">Your Perfect Colors</h3>
@@ -801,7 +833,6 @@ export default function OnboardingFlow() {
                         {/* Neutrals */}
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 space-y-4">
                             <h3 className="font-bold text-slate-900">Power Neutrals</h3>
-                            <p className="text-xs text-slate-500">Your specific base colors instead of just black/white.</p>
                             <div className="flex justify-between gap-2">
                                 {seasonData.neutrals.slice(0, 5).map((c, i) => (
                                     <div key={i} className="w-12 h-12 rounded-full shadow-sm border border-black/5" style={{ background: c }}></div>
@@ -810,9 +841,9 @@ export default function OnboardingFlow() {
                         </div>
 
                         {/* CTA */}
-                        <div className="pt-4 pb-12 safe-area-pb">
+                        <div className="pt-4 pb-12">
                             <button
-                                onClick={() => setStep('closet-transition')}
+                                onClick={() => setStep('identity')}
                                 className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl shadow-xl hover:scale-[1.02] transition-transform"
                             >
                                 Save My Results & Continue →
@@ -820,7 +851,94 @@ export default function OnboardingFlow() {
                         </div>
                     </div>
                 </div>
-            </div>
+            </StepWrapper>
+        );
+    }
+
+    // 10.5 Style Identity
+    if (step === 'identity') {
+        return (
+            <StepWrapper>
+                <div className="bg-white p-8 h-full flex flex-col items-center justify-center text-center space-y-8 animate-fade-in relative overflow-hidden">
+                    <div className="space-y-2">
+                        <h2 className="text-2xl font-bold text-slate-900 font-poppins">Select Your Style Base</h2>
+                        <p className="text-slate-500">This helps us suggest the best fit and silhouettes for you.</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 w-full">
+                        <button
+                            onClick={() => { setGender('male'); setStep('lifestyle'); }}
+                            className={`p-8 rounded-2xl border-2 transition-all flex flex-col items-center gap-4 ${gender === 'male' ? 'border-blue-500 bg-blue-50' : 'border-slate-100 hover:border-blue-200'}`}
+                        >
+                            <span className="text-4xl text-blue-600">♂️</span>
+                            <span className="font-bold">Male</span>
+                        </button>
+                        <button
+                            onClick={() => { setGender('female'); setStep('lifestyle'); }}
+                            className={`p-8 rounded-2xl border-2 transition-all flex flex-col items-center gap-4 ${gender === 'female' ? 'border-pink-500 bg-pink-50' : 'border-slate-100 hover:border-pink-200'}`}
+                        >
+                            <span className="text-4xl text-pink-600">♀️</span>
+                            <span className="font-bold">Female</span>
+                        </button>
+                    </div>
+
+                    <button onClick={() => setStep('results')} className="text-slate-400 hover:text-slate-600">Back</button>
+                </div>
+            </StepWrapper>
+        );
+    }
+
+    // 10.6 Lifestyle
+    if (step === 'lifestyle') {
+        const categories = [
+            { id: 'work', label: 'Work/Professional', emoji: '💼' },
+            { id: 'casual', label: 'Casual/Everyday', emoji: '👕' },
+            { id: 'athletic', label: 'Athletic/Gym', emoji: '🏃' },
+            { id: 'social', label: 'Social/Evening', emoji: '🥂' },
+        ];
+
+        const updateLifestyle = (id: string, val: number) => {
+            setLifestyle(prev => ({ ...prev, [id]: val }));
+        };
+
+        return (
+            <StepWrapper>
+                <div className="p-8 h-full flex flex-col animate-fade-in">
+                    <div className="text-center space-y-2 mb-8">
+                        <h2 className="text-2xl font-bold text-slate-900 font-poppins">Your Lifestyle</h2>
+                        <p className="text-slate-500 text-sm">How do you spend your week? (Approx. %)</p>
+                    </div>
+
+                    <div className="flex-1 space-y-6 overflow-y-auto scrollbar-none">
+                        {categories.map(cat => (
+                            <div key={cat.id} className="space-y-2">
+                                <div className="flex justify-between text-sm">
+                                    <span className="font-medium text-slate-700">{cat.emoji} {cat.label}</span>
+                                    <span className="font-bold text-purple-600">{lifestyle[cat.id as keyof typeof lifestyle]}%</span>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    value={lifestyle[cat.id as keyof typeof lifestyle]}
+                                    onChange={(e) => updateLifestyle(cat.id, parseInt(e.target.value))}
+                                    className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                                />
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="pt-8 space-y-3">
+                        <button
+                            onClick={() => setStep('closet-transition')}
+                            className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl shadow-lg hover:scale-[1.02] transition-transform"
+                        >
+                            Next →
+                        </button>
+                        <button onClick={() => setStep('identity')} className="w-full text-slate-400 hover:text-slate-600">Back</button>
+                    </div>
+                </div>
+            </StepWrapper>
         );
     }
 
@@ -828,30 +946,30 @@ export default function OnboardingFlow() {
     if (step === 'closet-transition') {
         setTimeout(() => setStep('closet-onboarding'), 2500);
         return (
-            <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-900 flex items-center justify-center p-8 text-white text-center">
-                <div className="space-y-6 animate-scale-in">
+            <StepWrapper className="bg-gradient-to-br from-indigo-900 to-purple-900">
+                <div className="h-full flex flex-col items-center justify-center p-8 text-white text-center space-y-6 animate-scale-in">
                     <div className="w-20 h-20 mx-auto bg-white/10 rounded-full flex items-center justify-center backdrop-blur-md">
                         <Sparkles className="w-10 h-10 text-yellow-300" />
                     </div>
                     <h2 className="text-3xl font-bold font-poppins">Amazing!</h2>
                     <p className="text-indigo-200 text-lg">Now let's build your digital closet so I can help you create stunning outfits!</p>
                 </div>
-            </div>
+            </StepWrapper>
         );
     }
 
     // 12. Closet Onboarding
     if (step === 'closet-onboarding') {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-[2rem] shadow-xl p-8 max-w-md w-full text-center space-y-8 animate-fade-in relative overflow-hidden">
+            <StepWrapper>
+                <div className="bg-white p-8 h-full flex flex-col items-center justify-center text-center space-y-8 animate-fade-in relative overflow-hidden">
                     <div className="w-20 h-20 mx-auto bg-blue-100 rounded-full flex items-center justify-center text-4xl">
                         👕
                     </div>
 
                     <h2 className="text-2xl font-bold text-slate-900">Let's Add Your First Item</h2>
 
-                    <div className="bg-slate-50 p-6 rounded-2xl text-left space-y-3">
+                    <div className="bg-slate-50 p-6 rounded-2xl text-left space-y-3 w-full">
                         <p className="text-sm font-semibold text-slate-900">Our AI will automatically:</p>
                         <ul className="space-y-2 text-sm text-slate-600">
                             <li className="flex gap-2"><Check className="w-4 h-4 text-green-500" /> Detect item type</li>
@@ -860,12 +978,10 @@ export default function OnboardingFlow() {
                         </ul>
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-3 w-full">
                         <button
-                            onClick={() => {
-                                // Mark onboarding as complete so middleware lets us pass
-                                localStorage.setItem("closet_has_onboarded", "true");
-                                document.cookie = "onboarding_complete=true; path=/; max-age=31536000; SameSite=Lax";
+                            onClick={async () => {
+                                await handleFinishOnboarding();
                                 router.push('/closet?action=add-new');
                             }}
                             className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-700 transition-colors"
@@ -880,7 +996,7 @@ export default function OnboardingFlow() {
                         </button>
                     </div>
                 </div>
-            </div>
+            </StepWrapper>
         );
     }
 

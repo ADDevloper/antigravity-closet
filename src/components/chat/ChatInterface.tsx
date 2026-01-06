@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Message, ClothingItem, Conversation, PCAProfile, addConversation, updateConversation, getAllItems, getAllConversations, deleteConversation, getPCAProfile } from "@/lib/db";
+import { Message, ClothingItem, Conversation, PCAProfile, UserProfile, addConversation, updateConversation, getAllItems, getAllConversations, deleteConversation, getPCAProfile, getUserProfile } from "@/lib/db";
 import { getFashionAdvice } from "@/lib/gemini";
 import { Send, Plus, Loader2, Sparkles, User, History, Calendar } from "lucide-react";
 import ConversationHistory from "./ConversationHistory";
+import { motion, AnimatePresence } from "framer-motion";
+import RatingButtons from "./RatingButtons";
 
 export default function ChatInterface() {
     const [messages, setMessages] = useState<Message[]>([]);
@@ -16,6 +18,7 @@ export default function ChatInterface() {
     const [showHistory, setShowHistory] = useState(false);
     const [isLoadingConv, setIsLoadingConv] = useState(false);
     const [pcaProfile, setPcaProfile] = useState<PCAProfile | null>(null);
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -23,6 +26,7 @@ export default function ChatInterface() {
         loadCloset();
         loadConversations();
         loadPCAProfile();
+        loadUserProfile();
     }, []);
 
     useEffect(() => {
@@ -46,6 +50,11 @@ export default function ChatInterface() {
     const loadPCAProfile = async () => {
         const profile = await getPCAProfile();
         setPcaProfile(profile);
+    };
+
+    const loadUserProfile = async () => {
+        const profile = await getUserProfile();
+        setUserProfile(profile);
     };
 
     const loadConversations = async () => {
@@ -76,12 +85,13 @@ export default function ChatInterface() {
         setLoading(true);
 
         try {
-            const response = await getFashionAdvice(undefined, closet, newMessages, input, pcaProfile || undefined);
+            const response = await getFashionAdvice(undefined, closet, newMessages, input, pcaProfile || undefined, userProfile);
 
             const assistantMessage: Message = {
                 role: 'assistant',
                 content: response.content,
                 outfits: response.outfits,
+                recommendations: response.recommendations,
                 timestamp: Date.now(),
             };
 
@@ -229,6 +239,14 @@ export default function ChatInterface() {
                                             ))}
                                         </div>
                                     )}
+
+                                    {msg.recommendations && msg.recommendations.length > 0 && (
+                                        <div className="space-y-3">
+                                            {msg.recommendations.map(reco => (
+                                                <ShopRecommendationCard key={reco.id} recommendation={reco} />
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -297,62 +315,121 @@ export default function ChatInterface() {
     );
 }
 
+function ShopRecommendationCard({ recommendation }: { recommendation: any }) {
+    const searchUrl = `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(recommendation.searchQuery)}`;
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-sm bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl p-4 text-white shadow-xl shadow-purple-100 flex flex-col gap-3 relative overflow-hidden group"
+        >
+            <div className="absolute top-0 right-0 p-8 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-white/20 transition-colors" />
+
+            <div className="flex items-start justify-between relative z-10">
+                <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-md">
+                            <Sparkles size={14} className="text-purple-200" />
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-purple-200">Personal Recommendation</span>
+                    </div>
+                    <h4 className="font-poppins font-bold text-lg leading-tight">{recommendation.itemName}</h4>
+                </div>
+            </div>
+
+            <p className="text-sm text-purple-50/90 leading-relaxed relative z-10">
+                {recommendation.reason}
+            </p>
+
+            <div className="relative z-10 pt-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full border border-white/30" style={{ background: recommendation.colorSuggestion }} />
+                    <span className="text-[10px] font-medium text-purple-100">Suggested Color</span>
+                </div>
+                <a
+                    href={searchUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 bg-white text-purple-700 font-bold px-4 py-2 rounded-xl text-xs hover:bg-purple-50 transition-colors shadow-lg active:scale-95"
+                >
+                    Shop Similar <Send size={12} />
+                </a>
+            </div>
+        </motion.div>
+    );
+}
+
 function OutfitCard({ outfit, closet }: { outfit: any, closet: ClothingItem[] }) {
+    const [isHidden, setIsHidden] = useState(false);
     const items = outfit.itemIds.map((id: number) => closet.find(i => i.id === id)).filter(Boolean);
 
     return (
-        <div className="flex-shrink-0 w-72 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col hover:border-purple-200 transition-all hover:shadow-md group">
-            <div className="p-3 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
-                <h4 className="font-poppins font-bold text-sm text-slate-800 truncate">{outfit.name}</h4>
-                <div className="flex gap-1">
-                    {items.slice(0, 3).map((item: ClothingItem, i: number) => (
-                        <div key={i} className="w-4 h-4 rounded-full border border-slate-200 overflow-hidden">
-                            <img src={item.image} className="w-full h-full object-cover" />
+        <AnimatePresence>
+            {!isHidden && (
+                <motion.div
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8, x: -20, filter: "blur(10px)" }}
+                    transition={{ duration: 0.3 }}
+                    className="flex-shrink-0 w-72 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col hover:border-purple-200 transition-all hover:shadow-md group"
+                >
+                    <div className="p-3 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
+                        <h4 className="font-poppins font-bold text-sm text-slate-800 truncate">{outfit.name}</h4>
+                        <div className="flex gap-1">
+                            {items.slice(0, 3).map((item: ClothingItem, i: number) => (
+                                <div key={i} className="w-4 h-4 rounded-full border border-slate-200 overflow-hidden">
+                                    <img src={item.image} className="w-full h-full object-cover" />
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
-            </div>
+                    </div>
 
-            <div className="flex-1 p-3 grid grid-cols-2 gap-2 bg-white">
-                {items.map((item: ClothingItem, i: number) => (
-                    <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-slate-100 bg-slate-50">
-                        <img src={item.image} alt={item.category} className="w-full h-full object-cover" />
-                        {item.brand && (
-                            <div className="absolute bottom-0 right-0 bg-black/60 text-white text-[8px] px-1.5 py-0.5 rounded-tl-md font-bold uppercase backdrop-blur-sm">
-                                {item.brand}
+                    <div className="flex-1 p-3 grid grid-cols-2 gap-2 bg-white">
+                        {items.map((item: ClothingItem, i: number) => (
+                            <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-slate-100 bg-slate-50">
+                                <img src={item.image} alt={item.category} className="w-full h-full object-cover" />
+                                {item.brand && (
+                                    <div className="absolute bottom-0 right-0 bg-black/60 text-white text-[8px] px-1.5 py-0.5 rounded-tl-md font-bold uppercase backdrop-blur-sm">
+                                        {item.brand}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="px-3 pb-3 space-y-3">
+                        <div className="text-[11px] text-slate-500 leading-relaxed line-clamp-2">
+                            {outfit.description}
+                        </div>
+
+                        {outfit.stylingTips && outfit.stylingTips.length > 0 && (
+                            <div className="bg-purple-50/50 rounded-xl p-2.5 border border-purple-100/50">
+                                <p className="text-[10px] font-bold text-purple-700 mb-1 uppercase tracking-wider flex items-center gap-1">
+                                    <Sparkles size={10} /> Styling Tips
+                                </p>
+                                <ul className="list-disc list-inside text-[10px] text-slate-600 space-y-0.5">
+                                    {outfit.stylingTips.map((tip: string, i: number) => (
+                                        <li key={i}>{tip}</li>
+                                    ))}
+                                </ul>
                             </div>
                         )}
+
+                        <div className="flex gap-2 pt-1 border-b border-slate-50 pb-3">
+                            <button className="flex-1 py-1.5 rounded-xl border border-slate-200 text-[10px] font-bold text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center gap-1 uppercase tracking-wider">
+                                <Calendar size={12} /> Schedule
+                            </button>
+                            <button className="flex-1 py-1.5 rounded-xl bg-purple-600 text-[10px] font-bold text-white hover:bg-purple-700 transition-colors shadow-sm shadow-purple-100 uppercase tracking-wider">
+                                Wear now
+                            </button>
+                        </div>
+
+                        <RatingButtons outfit={outfit} onDislike={() => setIsHidden(true)} />
                     </div>
-                ))}
-            </div>
-
-            <div className="px-3 pb-3 space-y-3">
-                <div className="text-[11px] text-slate-500 leading-relaxed line-clamp-2">
-                    {outfit.description}
-                </div>
-
-                {outfit.stylingTips && outfit.stylingTips.length > 0 && (
-                    <div className="bg-purple-50/50 rounded-xl p-2.5 border border-purple-100/50">
-                        <p className="text-[10px] font-bold text-purple-700 mb-1 uppercase tracking-wider flex items-center gap-1">
-                            <Sparkles size={10} /> Styling Tips
-                        </p>
-                        <ul className="list-disc list-inside text-[10px] text-slate-600 space-y-0.5">
-                            {outfit.stylingTips.map((tip: string, i: number) => (
-                                <li key={i}>{tip}</li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
-
-                <div className="flex gap-2 pt-1">
-                    <button className="flex-1 py-2 rounded-xl border border-slate-200 text-[10px] font-bold text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center gap-1">
-                        <Calendar size={12} /> SCHEDULE
-                    </button>
-                    <button className="flex-1 py-1.5 rounded-xl bg-purple-600 text-[10px] font-bold text-white hover:bg-purple-700 transition-colors shadow-sm shadow-purple-100">
-                        WEAR NOW
-                    </button>
-                </div>
-            </div>
-        </div>
+                </motion.div>
+            )}
+        </AnimatePresence>
     );
 }

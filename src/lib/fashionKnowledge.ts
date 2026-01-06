@@ -936,6 +936,72 @@ Similar to monochromatic but includes neutrals in the same temperature:
 - [ ] Simple jewelry (studs, delicate necklace)
 
 ═══════════════════════════════════════════════════════════════════════════════
+## 13. MASCULINE STYLING & BODY TYPES
+═══════════════════════════════════════════════════════════════════════════════
+
+### 13.1 Masculine Body Types
+#### The Trapezoid (Balanced)
+- **Characteristics**: Wide shoulders, tapering to waist. The "standard" mannequin shape.
+- **Goal**: Maintain balance.
+- **DO**: Most things fit well. Focus on tailored fits that follow the taper.
+- **AVOID**: Overly baggy clothes that hide the shape.
+
+#### The Inverted Triangle (Athletic)
+- **Characteristics**: Extremely broad shoulders, very narrow waist.
+- **Goal**: Balance the lower body to match the heavy upper body.
+- **DO**: Straight-leg pants, broad belts, V-neck shirts (to broaden the chest and narrow the eye down).
+- **AVOID**: Skinny jeans (makes the top look top-heavy), structured shoulder pads.
+
+#### The Rectangle (Straight)
+- **Characteristics**: Shoulders are the same width as waist/hips.
+- **Goal**: Create the illusion of wider shoulders or a narrower waist.
+- **DO**: Structured blazers with shoulder padding, layering, crew necks.
+- **AVOID**: Vertical stripes (exaggerates the straight shape).
+
+#### The Triangle (Narrow Shoulders)
+- **Characteristics**: Shoulders are narrower than the waist/hips.
+- **Goal**: Broaden the shoulders.
+- **DO**: Structured shoulders in jackets, patterned tops (draws attention up), button-down shirts with pockets.
+- **AVOID**: Polo shirts (narrow shoulders), horizontal stripes at the waist.
+
+#### The Oval (Round)
+- **Characteristics**: Weight carried in the midsection.
+- **Goal**: Create length and structure.
+- **DO**: Vertical stripes, dark colors, structured jackets (shoulders), V-necks.
+- **AVOID**: Busy patterns at the midsection, horizontal stripes, tight belts.
+
+### 13.2 Masculine Essentials
+- **Tops**: White/Navy T-shirts, White button-down, Oxford shirt (OCBD), Navy Merino sweater.
+- **Bottoms**: Dark raw denim, Navy chinos, Charcoal dress pants.
+- **Outerwear**: Navy Blazer, Harringon Jacket, Overcoat (Camel or Navy).
+- **Shoes**: White leather sneakers, Brown Chelsea boots, Black Derbies.
+
+═══════════════════════════════════════════════════════════════════════════════
+## 14. WARDROBE GAP ANALYSIS & DIAGNOSTICS
+═══════════════════════════════════════════════════════════════════════════════
+
+### 14.1 The 4 Core Gaps
+#### 1. The "Basics & Essentials" Gap
+- **Analysis**: Does the user have the "connectors"? (Neutrals, plain shirts, standard trousers).
+- **Missing**: If a user has 10 statement jackets but 0 plain white tees, they have an "Essentials Gap."
+
+#### 2. The Lifestyle & Occasion Gap
+- **Analysis**: Does the closet match the user's life?
+- **Logic**: If a user works in an office (70% lifestyle) but owns 90% activewear, they have a "Career Gap."
+
+#### 3. The Color & Color Theory Gap
+- **Analysis**: Is the palette cohesive or fragmented?
+- **Logic**: If all items are "Warm Autumn" but they own one "Cool Winter" jacket, that jacket is a "Color Island" (hard to match).
+
+#### 4. The "Versatility" (Matrix) Gap
+- **Analysis**: Mathematical outfit potential.
+- **Logic**: Finding the "Power Unlock" piece. This is the item that, if added, would connect the most existing pieces into new outfits.
+
+### 14.2 The "Power Unlock" Logic
+The AI identifies pieces that act as "Force Multipliers." 
+- **Example**: If a user has many shirts and many trousers but they don't look "finished," a **Neutral Blazer** might be the Power Unlock that turns 10 simple combos into 10 professional outfits.
+
+═══════════════════════════════════════════════════════════════════════════════
 
 END OF KNOWLEDGE BASE
 

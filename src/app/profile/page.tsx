@@ -3,12 +3,13 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AppWrapper from '@/components/layout/AppWrapper';
-import { User, Palette, Settings } from 'lucide-react';
+import Footer from '@/components/layout/Footer';
+import { User, Settings, Palette } from 'lucide-react';
 import { getPCAProfile, getAllItems, getUserProfile, getUserSettings, saveUserProfile, saveUserSettings, deletePCAProfile, PCAProfile, ClothingItem, UserProfile, UserSettings as SettingsType, DEFAULT_SETTINGS } from '@/lib/db';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import ProfileTab from '@/components/profile/ProfileTab';
-import MyColorsTab from '@/components/profile/MyColorsTab';
 import SettingsTab from '@/components/profile/SettingsTab';
+import MyColorsTab from '@/components/profile/MyColorsTab';
 
 function ProfileContent() {
     const router = useRouter();
@@ -69,6 +70,13 @@ function ProfileContent() {
         setUser(updated);
     };
 
+    const handleUpdateProfile = async (data: Partial<UserProfile>) => {
+        if (!user) return;
+        const updated = { ...user, ...data };
+        await saveUserProfile(updated);
+        setUser(updated);
+    };
+
     const handleSaveSettings = async (newSettings: SettingsType) => {
         await saveUserSettings(newSettings);
         setSettings(newSettings);
@@ -92,78 +100,86 @@ function ProfileContent() {
     }
 
     return (
-        <div className="pb-12 animate-in fade-in">
-            <ProfileHeader
-                user={user}
-                pca={pca}
-                itemCount={items.length}
-                onUpdateName={handleUpdateName}
-                onTabChange={handleTabChange}
-            />
+        <>
+            <div className="pb-12 animate-in fade-in">
+                <ProfileHeader
+                    user={user}
+                    pca={pca}
+                    itemCount={items.length}
+                    onUpdateName={handleUpdateName}
+                    onTabChange={handleTabChange}
+                />
 
-            {/* Tab Navigation */}
-            <div className="flex items-center gap-2 mb-6 bg-white p-1.5 rounded-2xl border border-slate-100 shadow-sm w-full md:w-fit mx-auto md:mx-0 overflow-x-auto">
-                {[
-                    { id: 'profile', label: 'Profile', icon: User },
-                    { id: 'colors', label: 'My Colors', icon: Palette },
-                    { id: 'settings', label: 'Settings', icon: Settings },
-                ].map((tab) => {
-                    const isActive = activeTab === tab.id;
-                    const Icon = tab.icon;
-                    return (
-                        <button
-                            key={tab.id}
-                            onClick={() => handleTabChange(tab.id as any)}
-                            className={`flex-1 md:flex-initial flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${isActive
+                {/* Tab Navigation */}
+                <div className="flex items-center gap-2 mb-6 bg-white p-1.5 rounded-2xl border border-slate-100 shadow-sm w-full md:w-fit mx-auto md:mx-0 overflow-x-auto">
+                    {[
+                        { id: 'profile', label: 'Profile', icon: User },
+                        { id: 'colors', label: 'My Colors', icon: Palette },
+                        { id: 'settings', label: 'Settings', icon: Settings },
+                    ].map((tab) => {
+                        const isActive = activeTab === tab.id;
+                        const Icon = tab.icon;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => handleTabChange(tab.id as any)}
+                                className={`flex-1 md:flex-initial flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${isActive
                                     ? 'bg-purple-600 text-white shadow-md'
                                     : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
-                                }`}
-                        >
-                            <Icon size={16} />
-                            {tab.label}
-                        </button>
-                    );
-                })}
-            </div>
-
-            {/* Content Area */}
-            <div className="min-h-[400px]">
-                {activeTab === 'profile' && (
-                    <ProfileTab
-                        user={user}
-                        items={items}
-                        onUpdateBio={handleUpdateBio}
-                        onDeleteAccount={handleDeleteAccount}
-                    />
-                )}
-                {activeTab === 'colors' && (
-                    pca ? (
-                        <MyColorsTab pca={pca} items={items} />
-                    ) : (
-                        <div className="text-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm">
-                            <Palette size={48} className="mx-auto text-slate-300 mb-4" />
-                            <h3 className="font-bold text-xl text-slate-900 mb-2">No Color Analysis Yet</h3>
-                            <p className="text-slate-500 mb-6 max-w-sm mx-auto">Discover your perfect colors to get personalized fashion advice.</p>
-                            <button
-                                onClick={() => router.push('/pca')}
-                                className="px-8 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-100"
+                                    }`}
                             >
-                                Start Analysis
+                                <Icon size={16} />
+                                {tab.label}
                             </button>
-                        </div>
-                    )
-                )}
-                {activeTab === 'settings' && (
-                    <SettingsTab
-                        settings={settings}
-                        onSave={handleSaveSettings}
-                        onRetakePCA={() => router.push('/pca')}
-                        onDeleteData={handleDeleteAccount}
-                        onResetApp={handleDeleteAccount}
-                    />
-                )}
+                        );
+                    })}
+                </div>
+
+                {/* Content Area */}
+                <div className="min-h-[400px]">
+                    {activeTab === 'profile' && (
+                        <ProfileTab
+                            user={user}
+                            items={items}
+                            onUpdateBio={handleUpdateBio}
+                            onUpdateProfile={handleUpdateProfile}
+                            onDeleteAccount={handleDeleteAccount}
+                        />
+                    )}
+                    {activeTab === 'colors' && (
+                        pca ? (
+                            <MyColorsTab pca={pca} items={items} />
+                        ) : (
+                            <div className="bg-white p-12 rounded-[2rem] border border-slate-100 shadow-sm text-center space-y-6">
+                                <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto">
+                                    <Palette size={40} className="text-slate-300" />
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="text-xl font-bold text-slate-900">No Analysis Found</h3>
+                                    <p className="text-slate-500 max-w-xs mx-auto">Complete your color analysis to unlock your perfect palette and styling tips.</p>
+                                </div>
+                                <button
+                                    onClick={() => router.push('/onboarding?step=pca-intro')}
+                                    className="px-8 py-3 bg-purple-600 text-white font-bold rounded-xl shadow-lg shadow-purple-200 hover:scale-[1.02] transition-transform"
+                                >
+                                    Start Analysis →
+                                </button>
+                            </div>
+                        )
+                    )}
+                    {activeTab === 'settings' && (
+                        <SettingsTab
+                            settings={settings}
+                            onSave={handleSaveSettings}
+                            onRetakePCA={() => router.push('/onboarding?step=pca-intro')}
+                            onDeleteData={handleDeleteAccount}
+                            onResetApp={handleDeleteAccount}
+                        />
+                    )}
+                </div>
             </div>
-        </div>
+            <Footer />
+        </>
     );
 }
 
