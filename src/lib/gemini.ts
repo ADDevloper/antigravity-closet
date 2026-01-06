@@ -224,6 +224,21 @@ export async function getFashionAdvice(
     
     6. **Shopping Recommendation Card (OPTIONAL)**: If a key piece is missing to complete the look, suggest it in addition to the Outfit card:
        [RECO: {"itemName": "...", "reason": "...", "colorSuggestion": "...", "searchQuery": "..."}]
+       
+       **CRITICAL SHOPPING RECOMMENDATION RULES**:
+       - Only recommend if there's a REAL gap (e.g., user has 0 blazers but 40% Work lifestyle)
+       - Be SPECIFIC: Instead of "blazer", say "navy blue cotton blazer for men" or "beige linen blazer for women"
+       - Match their GENDER: Check userProfile.gender before recommending
+       - Use PCA colors: Recommend items in their bestColors palette
+       - Consider LIFESTYLE: If Work=60%, prioritize professional items. If Athletic=50%, suggest activewear
+       - searchQuery should be detailed for Amazon: Include gender, color, material, and category
+       - Example good searchQuery: "olive green casual shirt for men cotton" NOT just "shirt"
+       
+       **When to recommend**:
+       - User asks for outfit but is missing a category (e.g., no formal shoes for a wedding outfit)
+       - Wardrobe gap analysis shows imbalance (e.g., 5 tops but 0 bottoms)
+       - User's lifestyle doesn't match their closet (e.g., 70% Work lifestyle but only casual clothes)
+       
        *You can and should output BOTH an [OUTFIT] and a [RECO] in the same response if clothes from the closet are mentioned.*
 
     7. **Encourage Mixed Styling**: Feel free to suggest "Indo-Western" looks if appropriate.

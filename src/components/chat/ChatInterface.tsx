@@ -316,7 +316,9 @@ export default function ChatInterface() {
 }
 
 function ShopRecommendationCard({ recommendation }: { recommendation: any }) {
-    const searchUrl = `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(recommendation.searchQuery)}`;
+    // Convert search query to Amazon-compatible format and add Associate ID
+    const searchQuery = encodeURIComponent(recommendation.searchQuery);
+    const searchUrl = `https://www.amazon.in/s?k=${searchQuery}&tag=closetai-21`;
 
     return (
         <motion.div
@@ -353,7 +355,7 @@ function ShopRecommendationCard({ recommendation }: { recommendation: any }) {
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 bg-white text-purple-700 font-bold px-4 py-2 rounded-xl text-xs hover:bg-purple-50 transition-colors shadow-lg active:scale-95"
                 >
-                    Shop Similar <Send size={12} />
+                    Shop on Amazon <Send size={12} />
                 </a>
             </div>
         </motion.div>
