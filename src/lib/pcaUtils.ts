@@ -348,8 +348,23 @@ export function getSeasonColors(season: ColorSeason): { best: string[], avoid: s
 
 // Helper to check if a color matches the palette (simple RGB distance)
 export function isColorInPalette(itemColors: string[], paletteColors: string[]): boolean {
-    // Convert hex to RGB
-    const hexToRgb = (hex: string) => {
+    // Convert hex or name to RGB
+    const colorToRgb = (color: string) => {
+        // Standard CSS Color Names Map
+        const colorNames: Record<string, string> = {
+            'red': '#FF0000', 'green': '#008000', 'blue': '#0000FF', 'yellow': '#FFFF00',
+            'orange': '#FFA500', 'purple': '#800080', 'pink': '#FFC0CB', 'brown': '#A52A2A',
+            'black': '#000000', 'white': '#FFFFFF', 'gray': '#808080', 'grey': '#808080',
+            'navy': '#000080', 'teal': '#008080', 'olive': '#808000', 'maroon': '#800000',
+            'lime': '#00FF00', 'aqua': '#00FFFF', 'fuchsia': '#FF00FF', 'silver': '#C0C0C0',
+            'gold': '#FFD700', 'beige': '#F5F5DC', 'ivory': '#FFFFF0', 'khaki': '#F0E68C',
+            'coral': '#FF7F50', 'salmon': '#FA8072', 'turquoise': '#40E0D0', 'lavender': '#E6E6FA',
+            'plum': '#DDA0DD', 'indigo': '#4B0082', 'charcoal': '#36454F', 'camel': '#C19A6B'
+        };
+
+        const hex = color.startsWith('#') ? color : colorNames[color.toLowerCase()];
+        if (!hex) return null;
+
         const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
         return result ? {
             r: parseInt(result[1], 16),
@@ -370,11 +385,11 @@ export function isColorInPalette(itemColors: string[], paletteColors: string[]):
     const THRESHOLD = 60; // Loose threshold for matching
 
     for (const itemColor of itemColors) {
-        const rgb1 = hexToRgb(itemColor);
+        const rgb1 = colorToRgb(itemColor);
         if (!rgb1) continue;
 
         for (const paletteColor of paletteColors) {
-            const rgb2 = hexToRgb(paletteColor);
+            const rgb2 = colorToRgb(paletteColor);
             if (!rgb2) continue;
 
             if (colorDistance(rgb1, rgb2) < THRESHOLD) {

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Navbar from "@/components/ui/Navbar";
+import DesktopSidebar from "@/components/layout/DesktopSidebar";
 import ItemForm from "@/components/closet/ItemForm";
 import { addItem, ClothingItem, getPCAProfile } from "@/lib/db";
 
@@ -10,7 +11,6 @@ export default function AppWrapper({ children }: { children: React.ReactNode }) 
     const [isAddingItem, setIsAddingItem] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
-    const [checkingPCA, setCheckingPCA] = useState(true);
 
     useEffect(() => {
         checkPCAStatus();
@@ -19,7 +19,6 @@ export default function AppWrapper({ children }: { children: React.ReactNode }) 
     const checkPCAStatus = async () => {
         // Don't check if we are already on the PCA page or hidden routes
         if (pathname === '/pca' || pathname === '/settings') {
-            setCheckingPCA(false);
             return;
         }
 
@@ -32,8 +31,6 @@ export default function AppWrapper({ children }: { children: React.ReactNode }) 
             }
         } catch (e) {
             console.error("Error checking PCA status", e);
-        } finally {
-            setCheckingPCA(false);
         }
     };
 
@@ -53,10 +50,18 @@ export default function AppWrapper({ children }: { children: React.ReactNode }) 
         }
     };
 
+    const [isCollapsed, setIsCollapsed] = useState(false);
+
     return (
         <>
+            <DesktopSidebar
+                onAddClick={() => setIsAddingItem(true)}
+                isCollapsed={isCollapsed}
+                setIsCollapsed={setIsCollapsed}
+            />
             <Navbar onAddClick={() => setIsAddingItem(true)} />
-            <main className="min-h-screen pb-24 pt-4 md:pt-24 px-4 md:px-12 max-w-7xl mx-auto">
+            <main className={`min-h-screen transition-all duration-300 ${isCollapsed ? "lg:pl-24" : "lg:pl-[288px]"
+                } ${pathname === '/' ? '' : 'pb-24 pt-4 px-4 lg:pb-8 lg:pt-8 lg:pr-8 max-w-[1600px] lg:ml-0'}`}>
                 {children}
             </main>
             {isAddingItem && (

@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Closet - Color Palette Showcase</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap');
+
+        body {
+            margin: 0;
+            padding: 40px;
+            background-color: #f0f0f0;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 3rem;
+            margin-bottom: 40px;
+            color: #333;
+            text-align: center;
+        }
+
+        .showcase-container {
+            display: flex;
+            gap: 40px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .phone-mockup {
+            width: 320px;
+            height: 650px;
+            border-radius: 40px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2), 0 0 0 10px #1a1a1a;
+            position: relative;
+            background: white;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 30px;
+            background: #1a1a1a;
+            border-bottom-left-radius: 16px;
+            border-bottom-right-radius: 16px;
+            z-index: 10;
+        }
+
+        /* Common UI Elements */
+        .status-bar {
+            height: 40px;
+            width: 100%;
+        }
+
+        .header {
+            padding: 20px;
+            padding-top: 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .chat-area {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow: hidden;
+        }
+
+        .bubble {
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 0.9rem;
+            max-width: 80%;
+            line-height: 1.4;
+        }
+
+        .bubble.ai {
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .bubble.user {
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+            text-align: right;
+        }
+
+        .card {
+            width: 100%;
+            border-radius: 20px;
+            padding: 15px;
+            margin-top: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .card-img {
+            width: 100%;
+            height: 120px;
+            background-color: #ddd; /* Placeholder */
+            border-radius: 12px;
+            margin-bottom: 10px;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .card-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+
+        .card-text {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            margin-bottom: 10px;
+        }
+
+        .card-btn {
+            padding: 8px 0;
+            text-align: center;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            width: 100%;
+        }
+
+        .nav-bar {
+            height: 70px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding-bottom: 10px;
+            backdrop-filter: blur(20px);
+        }
+
+        .nav-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: currentColor;
+            opacity: 0.5;
+        }
+        .nav-icon.active {
+            opacity: 1;
+        }
+
+        /* --- THEMES --- */
+
+        /* 1. MIDNIGHT & FROST */
+        .theme-midnight {
+            background-color: #1A237E; /* Deep Indigo */
+            color: #F5F5F7; /* Frost White */
+        }
+        .theme-midnight .bubble.ai {
+            background-color: rgba(69, 90, 100, 0.4); /* Slate Gray translucent */
+            border: 1px solid #00E5FF; /* Electric Cyan */
+            color: #F5F5F7;
+        }
+        .theme-midnight .bubble.user {
+            background-color: #00E5FF; /* Electric Cyan */
+            color: #1A237E;
+            font-weight: 600;
+        }
+        .theme-midnight .card {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .theme-midnight .card-title { color: #00E5FF; }
+        .theme-midnight .card-img { background-color: #2c3e50; }
+        .theme-midnight .card-btn { background: #00E5FF; color: #1A237E; }
+        .theme-midnight .nav-bar { background: rgba(26, 35, 126, 0.8); border-top: 1px solid rgba(255,255,255,0.1); }
+        .theme-midnight .nav-icon { background-color: #F5F5F7; }
+        .theme-midnight .nav-icon.active { background-color: #00E5FF; box-shadow: 0 0 10px #00E5FF; }
+
+
+        /* 2. CASHMERE & CLAY */
+        .theme-cashmere {
+            background-color: #D7CCC8; /* Warm Beige */
+            color: #5D4037; /* Rich Umber */
+        }
+        .theme-cashmere .bubble.ai {
+            background-color: #FFF9C4; /* Cream */
+            color: #5D4037;
+        }
+        .theme-cashmere .bubble.user {
+            background-color: #E57373; /* Soft Terracotta */
+            color: #FFF9C4;
+        }
+        .theme-cashmere .card {
+            background: rgba(255, 249, 196, 0.4);
+            border: 1px solid #5D4037;
+        }
+        .theme-cashmere .card-title { color: #5D4037; }
+        .theme-cashmere .card-img { background-color: #bcaaa4; }
+        .theme-cashmere .card-btn { background: #5D4037; color: #FFF9C4; }
+        .theme-cashmere .nav-bar { background: rgba(215, 204, 200, 0.8); border-top: 1px solid rgba(93, 64, 55, 0.1); }
+        .theme-cashmere .nav-icon { background-color: #5D4037; }
+
+
+        /* 3. EDITORIAL ROSE */
+        .theme-rose {
+            background-color: #FAFAFA; /* Off-White */
+            color: #000;
+        }
+        .theme-rose .header-title { color: #880E4F; /* Deep Burgundy */ }
+        .theme-rose .bubble.ai {
+            background-color: #fff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            color: #333;
+            border: 1px solid #FFD54F; /* Gold */
+        }
+        .theme-rose .bubble.user {
+            background-color: #880E4F; /* Burgundy */
+            color: #fff;
+        }
+        .theme-rose .card {
+            background: #fff;
+            box-shadow: 0 10px 30px rgba(136, 14, 79, 0.1);
+        }
+        .theme-rose .card-title { color: #880E4F; }
+        .theme-rose .card-img { background-color: #e0e0e0; }
+        .theme-rose .card-btn { background: #F06292; /* Dusty Rose */ color: #fff; }
+        .theme-rose .nav-bar { background: rgba(255,255,255,0.9); }
+        .theme-rose .nav-icon { background-color: #880E4F; }
+
+
+        /* 4. ETHEREAL AURORA */
+        .theme-aurora {
+            background-color: #4A148C; /* Deep Violet */
+            background: linear-gradient(135deg, #4A148C 0%, #311B92 100%);
+            color: #fff;
+        }
+        .theme-aurora .bubble.ai {
+            background: rgba(225, 190, 231, 0.2); /* Soft Lavender glass */
+            backdrop-filter: blur(10px);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .theme-aurora .bubble.user {
+            background: linear-gradient(90deg, #BBDEFB, #B2DFDB); /* Pearl to Mint */
+            color: #4A148C;
+            font-weight: 600;
+        }
+        .theme-aurora .card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(178, 223, 219, 0.3);
+        }
+        .theme-aurora .card-title {
+            background: -webkit-linear-gradient(#BBDEFB, #B2DFDB);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .theme-aurora .card-img { background-color: #6a1b9a; }
+        .theme-aurora .card-btn { background: #B2DFDB; color: #4A148C; }
+        .theme-aurora .nav-bar { background: rgba(74, 20, 140, 0.6); }
+        .theme-aurora .nav-icon { background-color: #E1BEE7; }
+        .theme-aurora .nav-icon.active { background-color: #B2DFDB; box-shadow: 0 0 15px #B2DFDB; }
+
+        .palette-name {
+            text-align: center;
+            margin-top: 20px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #555;
+            font-size: 0.9rem;
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>AURA Assistant - Palette Showcase</h1>
+
+    <div class="showcase-container">
+
+        <!-- Phone 1 -->
+        <div>
+            <div class="phone-mockup theme-midnight">
+                <div class="notch"></div>
+                <div class="status-bar"></div>
+                <div class="header">
+                    <span class="header-title">AURA</span>
+                    <span>✨</span>
+                </div>
+                <div class="chat-area">
+                    <div class="bubble ai">Hello! Ready to style your evening look?</div>
+                    <div class="bubble user">I need something for a gala.</div>
+                    <div class="card">
+                        <div class="card-img"></div>
+                        <div class="card-title">Midnight Gala</div>
+                        <div class="card-text">A sophisticated deep blue ensemble with silver accents.</div>
+                        <div class="card-btn">View Look</div>
+                    </div>
+                </div>
+                <div class="nav-bar">
+                    <div class="nav-icon"></div>
+                    <div class="nav-icon"></div>
+                    <div class="nav-icon active"></div>
+                    <div class="nav-icon"></div>
+                    <div class="nav-icon"></div>
+                </div>
+            </div>
+            <div class="palette-name">Midnight & Frost</div>
+        </div>
+
+        <!-- Phone 2 -->
+        <div>
+            <div class="phone-mockup theme-cashmere">
+                <div class="notch"></div>
+                <div class="status-bar"></div>
+                <div class="header">
+                    <span class="header-title">AURA</span>
+                    <span>✨</span>
+                </div>
+                <div class="chat-area">
+                    <div class="bubble ai">Good morning. Coffee date outfit?</div>
+                    <div class="bubble user">Yes, cozy and chic please.</div>
+                    <div class="card">
+                        <div class="card-img" style="background-color: #d7ccc8;"></div>
+                        <div class="card-title">Weekend Layers</div>
+                        <div class="card-text">Soft knits combined with tailored trousers.</div>
+                        <div class="card-btn">View Look</div>
+                    </div>
+                </div>
+                <div class="nav-bar">
+                    <div class="nav-icon"></div>
+                    <div class="nav-icon"></div>
+                    <div class="nav-icon active"></div>
+                    <div class="nav-icon"></div>
+                    <div class="nav-icon"></div>
+                </div>
+            </div>
+            <div class="palette-name">Cashmere & Clay</div>
+        </div>
+
+        <!-- Phone 3 -->
+        <div>
+            <div class="phone-mockup theme-rose">
+                <div class="notch"></div>
+                <div class="status-bar"></div>
+                <div class="header">
+                    <span class="header-title">AURA</span>
+                    <span>✨</span>
+                </div>
+                <div class="chat-area">
+                    <div class="bubble ai">The new collection is here.</div>
+                    <div class="bubble user">Show me the statement pieces.</div>
+                    <div class="card">
+                        <div class="card-img" style="background-color: #f8bbd0;"></div>
+                        <div class="card-title">Editorial Power</div>
+                        <div class="card-text">Bold burgundy blazer with gold details.</div>
+                        <div class="card-btn">View Look</div>
+                    </div>
+                </div>
+                <div class="nav-bar">
+                    <div class="nav-icon"></div>
+                    <div class="nav-icon"></div>
+                    <div class="nav-icon active"></div>
+                    <div class="nav-icon"></div>
+                    <div class="nav-icon"></div>
+                </div>
+            </div>
+            <div class="palette-name">Editorial Rose</div>
+        </div>
+
+        <!-- Phone 4 -->
+        <div>
+            <div class="phone-mockup theme-aurora">
+                <div class="notch"></div>
+                <div class="status-bar"></div>
+                <div class="header">
+                    <span class="header-title">AURA</span>
+                    <span>✨</span>
+                </div>
+                <div class="chat-area">
+                    <div class="bubble ai">Feeling adventurous today?</div>
+                    <div class="bubble user">Totally. Surprise me!</div>
+                    <div class="card">
+                        <div class="card-img" style="background-color: #673ab7;"></div>
+                        <div class="card-title">Neon Dreams</div>
+                        <div class="card-text">Holographic accessories with violet tones.</div>
+                        <div class="card-btn">View Look</div>
+                    </div>
+                </div>
+                <div class="nav-bar">
+                    <div class="nav-icon"></div>
+                    <div class="nav-icon"></div>
+                    <div class="nav-icon active"></div>
+                    <div class="nav-icon"></div>
+                    <div class="nav-icon"></div>
+                </div>
+            </div>
+            <div class="palette-name">Ethereal Aurora</div>
+        </div>
+
+    </div>
+</body>
+</html>

@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { UserSettings, DEFAULT_SETTINGS } from '@/lib/db';
-import { ChevronDown, ChevronUp, Palette, Shirt, MessageSquare, Bell, Lock, Eye, HelpCircle, AlertTriangle } from 'lucide-react';
+import { Palette, Shirt, MessageSquare, Lock, AlertTriangle, Plus } from 'lucide-react';
+import { AccordionItem, Toggle } from './SettingsComponents';
 
 interface SettingsTabProps {
     settings: UserSettings | null;
@@ -18,11 +19,11 @@ export default function SettingsTab({ settings, onSave, onRetakePCA, onDeleteDat
 
     const toggleSection = (id: string) => setOpenSection(openSection === id ? null : id);
 
-    const updateSetting = async (section: keyof UserSettings, key: string, value: any) => {
+    const updateSetting = async (section: keyof UserSettings, key: string, value: string | boolean) => {
         const newSettings = {
             ...localSettings,
             [section]: {
-                // @ts-ignore
+                // @ts-expect-error - section dynamically indexes settings objects
                 ...localSettings[section],
                 [key]: value
             }
@@ -31,48 +32,11 @@ export default function SettingsTab({ settings, onSave, onRetakePCA, onDeleteDat
         await onSave(newSettings);
     };
 
-    const AccordionItem = ({ id, icon: Icon, title, children }: any) => (
-        <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
-            <button
-                onClick={() => toggleSection(id)}
-                className="w-full flex items-center justify-between p-5 text-left hover:bg-slate-50 transition-colors"
-            >
-                <div className="flex items-center gap-3 font-bold text-slate-800">
-                    <Icon size={20} className="text-purple-600" />
-                    {title}
-                </div>
-                {openSection === id ? <ChevronUp size={20} className="text-slate-400" /> : <ChevronDown size={20} className="text-slate-400" />}
-            </button>
-            {openSection === id && (
-                <div className="p-5 pt-0 border-t border-slate-50">
-                    <div className="pt-5 space-y-6">
-                        {children}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-
-    const Toggle = ({ label, checked, onChange, description }: any) => (
-        <div className="flex items-center justify-between">
-            <div className="pr-4">
-                <p className="font-bold text-sm text-slate-900">{label}</p>
-                {description && <p className="text-xs text-slate-500 mt-0.5">{description}</p>}
-            </div>
-            <button
-                onClick={() => onChange(!checked)}
-                className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${checked ? 'bg-purple-500' : 'bg-slate-200'}`}
-            >
-                <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full shadow-sm transition-transform ${checked ? 'translate-x-5' : ''}`} />
-            </button>
-        </div>
-    );
-
     return (
         <div className="space-y-4 animate-in fade-in duration-500 max-w-2xl mx-auto">
 
             {/* PCA Settings */}
-            <AccordionItem id="pca" icon={Palette} title="Color Analysis">
+            <AccordionItem id="pca" icon={Palette} title="Color Analysis" openSection={openSection} toggleSection={toggleSection}>
                 <Toggle
                     label="Show Season on Profile"
                     checked={localSettings.pca.showInProfile}
@@ -99,7 +63,7 @@ export default function SettingsTab({ settings, onSave, onRetakePCA, onDeleteDat
             </AccordionItem>
 
             {/* Closet Management */}
-            <AccordionItem id="closet" icon={Shirt} title="Wardrobe Settings">
+            <AccordionItem id="closet" icon={Shirt} title="Wardrobe Settings" openSection={openSection} toggleSection={toggleSection}>
                 <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">View Style</label>
                     <div className="flex bg-slate-100 p-1 rounded-xl">
@@ -122,7 +86,7 @@ export default function SettingsTab({ settings, onSave, onRetakePCA, onDeleteDat
             </AccordionItem>
 
             {/* AI Settings */}
-            <AccordionItem id="ai" icon={MessageSquare} title="AI Stylist">
+            <AccordionItem id="ai" icon={MessageSquare} title="AI Stylist" openSection={openSection} toggleSection={toggleSection}>
                 <Toggle
                     label="Include Weather"
                     checked={localSettings.aiChat.includeWeather}
@@ -133,45 +97,52 @@ export default function SettingsTab({ settings, onSave, onRetakePCA, onDeleteDat
                     checked={localSettings.aiChat.suggestGaps}
                     onChange={(v: boolean) => updateSetting('aiChat', 'suggestGaps', v)}
                 />
-                <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Personality Tone</label>
-                    <select
-                        value={localSettings.aiChat.tone}
-                        onChange={(e) => updateSetting('aiChat', 'tone', e.target.value)}
-                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-purple-500"
-                    >
-                        <option>Casual & Friendly</option>
-                        <option>Professional</option>
-                        <option>Enthusiastic</option>
-                        <option>Minimalist</option>
-                    </select>
+                <div className="pt-2">
+                    <label className="block text-xs font-black text-[#64748B] uppercase tracking-widest mb-3">Personality Tone</label>
+                    <div className="relative">
+                        <select
+                            value={localSettings.aiChat.tone}
+                            onChange={(e) => updateSetting('aiChat', 'tone', e.target.value)}
+                            className="w-full p-4 bg-slate-50 border border-[#E2E8F0] rounded-2xl text-sm font-bold text-[#1C1A2E] appearance-none focus:ring-2 focus:ring-purple-100 outline-none transition-all cursor-pointer"
+                        >
+                            <option>Casual & Friendly</option>
+                            <option>Professional</option>
+                            <option>Enthusiastic</option>
+                            <option>Minimalist</option>
+                        </select>
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                            <Plus size={16} className="rotate-45" />
+                        </div>
+                    </div>
                 </div>
             </AccordionItem>
 
             {/* Privacy */}
-            <AccordionItem id="privacy" icon={Lock} title="Privacy & Data">
-                <p className="text-xs text-slate-500 leading-relaxed bg-slate-50 p-3 rounded-lg">
-                    All your photos and data are stored locally on your device via IndexedDB. We do not store your data on any cloud servers.
-                </p>
+            <AccordionItem id="privacy" icon={Lock} title="Privacy & Data" openSection={openSection} toggleSection={toggleSection}>
+                <div className="p-5 bg-blue-50/50 border border-blue-100 rounded-2xl mb-4">
+                    <p className="text-xs text-blue-800 leading-relaxed font-bold">
+                        All your photos and data are stored locally on your device via IndexedDB. Your style remains private and secure.
+                    </p>
+                </div>
                 <Toggle
                     label="Store Selfie Locally"
                     description="Keep your analysis photo on this device"
                     checked={localSettings.privacy.storeSelfie}
                     onChange={(v: boolean) => updateSetting('privacy', 'storeSelfie', v)}
                 />
-                <button onClick={onDeleteData} className="w-full py-3 mt-2 text-rose-600 font-bold text-sm bg-rose-50 rounded-xl hover:bg-rose-100 flex items-center justify-center gap-2">
-                    <AlertTriangle size={16} /> Delete All Data
+                <button onClick={onDeleteData} className="w-full py-4 mt-4 text-rose-700 font-bold text-sm bg-rose-50 rounded-2xl hover:bg-rose-100 flex items-center justify-center gap-3 transition-colors border border-rose-100 shadow-sm">
+                    <AlertTriangle size={18} /> Delete All Data
                 </button>
             </AccordionItem>
 
             {/* Danger Zone */}
-            <div className="mt-8 pt-8 border-t border-slate-200">
-                <div className="bg-rose-50 border border-rose-100 rounded-2xl p-5">
-                    <h4 className="font-bold text-rose-800 flex items-center gap-2 mb-2">
-                        <AlertTriangle size={18} /> Danger Zone
+            <div className="mt-12 pt-8 border-t-2 border-slate-100">
+                <div className="bg-rose-50 border border-rose-100 rounded-[32px] p-8">
+                    <h4 className="font-bold text-lg text-rose-800 flex items-center gap-3 mb-3">
+                        <AlertTriangle size={24} /> Danger Zone
                     </h4>
-                    <p className="text-xs text-rose-600 mb-4">Irreversible actions that affect your account.</p>
-                    <button onClick={onResetApp} className="w-full py-3 bg-white border border-rose-200 text-rose-600 font-bold rounded-xl text-sm hover:bg-rose-600 hover:text-white transition-colors">
+                    <p className="text-sm text-rose-700 font-medium mb-6 leading-relaxed">Irreversible actions that will permanently remove your data and reset your experience.</p>
+                    <button onClick={onResetApp} className="w-full py-4 bg-white border-2 border-rose-200 text-rose-600 font-black rounded-2xl text-sm hover:bg-rose-600 hover:text-white transition-all shadow-sm active:scale-95">
                         Reset Application
                     </button>
                 </div>

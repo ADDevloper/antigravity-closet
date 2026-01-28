@@ -1,12 +1,22 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Poppins } from "next/font/google";
+import { Plus_Jakarta_Sans, Playfair_Display, Manrope } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const poppins = Poppins({
+const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-poppins"
+  variable: "--font-plus-jakarta",
+  display: "swap",
+});
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-playfair-display",
+  display: "swap",
+});
+const manrope = Manrope({
+  subsets: ["latin"],
+  variable: "--font-manrope",
+  weight: ["300", "400", "500", "600", "700", "800"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -27,6 +37,7 @@ export const viewport: Viewport = {
 
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { AuthProvider } from "@/context/AuthContext";
 
 export default function RootLayout({
   children,
@@ -35,9 +46,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body suppressHydrationWarning className={`${inter.variable} ${poppins.variable} font-sans antialiased bg-slate-50 text-slate-900`}>
-        {children}
-        <ToastContainer position="bottom-right" autoClose={3000} />
+      <body suppressHydrationWarning className={`${plusJakarta.variable} ${playfair.variable} ${manrope.variable} font-sans antialiased bg-[#F2F2F7] text-slate-900`}>
+        <AuthProvider>
+          {children}
+          <ToastContainer position="bottom-right" autoClose={3000} />
+        </AuthProvider>
       </body>
     </html>
   );

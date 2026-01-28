@@ -46,15 +46,17 @@ export default function MyColorsTab({ pca, items }: MyColorsTabProps) {
 
             {/* 2. Your Perfect Colors */}
             <section>
-                <h3 className="font-poppins font-bold text-xl text-slate-900 mb-6 flex items-center gap-2">
-                    <Sparkles size={24} className="text-purple-500" />
+                <h3 className="font-poppins font-bold text-2xl text-[#1C1A2E] mb-6 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
+                        <Sparkles size={24} />
+                    </div>
                     Your Perfect Colors
                 </h3>
-                <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
+                <div className="grid grid-cols-4 md:grid-cols-6 gap-4">
                     {seasonData.best.map((color, i) => (
-                        <div key={i} className="group relative aspect-square rounded-2xl shadow-sm hover:shadow-lg transition-transform hover:scale-105 cursor-pointer border border-slate-100" style={{ backgroundColor: color }}>
-                            <div className="absolute inset-x-0 bottom-0 py-1 bg-black/40 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity rounded-b-xl flex justify-center">
-                                <span className="text-[10px] text-white font-mono uppercase">{color}</span>
+                        <div key={i} className="group relative aspect-square rounded-[24px] shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 cursor-pointer border-2 border-white ring-1 ring-[#E2E8F0]" style={{ backgroundColor: color }}>
+                            <div className="absolute inset-x-0 bottom-0 py-2 bg-black/60 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity rounded-b-[22px] flex justify-center">
+                                <span className="text-[10px] text-white font-mono font-bold uppercase">{color}</span>
                             </div>
                         </div>
                     ))}
@@ -63,34 +65,36 @@ export default function MyColorsTab({ pca, items }: MyColorsTabProps) {
 
             {/* 3. Best Neutrals */}
             <section>
-                <h3 className="font-poppins font-bold text-lg text-slate-900 mb-4">Your Go-To Neutrals</h3>
-                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-                    <div className="flex gap-4 overflow-x-auto scrollbar-none pb-2">
+                <h3 className="font-poppins font-bold text-xl text-[#1C1A2E] mb-6">Your Go-To Neutrals</h3>
+                <div className="bg-white p-8 rounded-[32px] border border-[#E2E8F0] shadow-sm">
+                    <div className="flex gap-4 overflow-x-auto scrollbar-none pb-4">
                         {seasonData.neutrals.map((color, i) => (
-                            <div key={i} className="w-16 h-16 md:w-20 md:h-20 shrink-0 rounded-2xl shadow-sm border border-slate-100" style={{ backgroundColor: color }} />
+                            <div key={i} className="w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-[28px] shadow-sm border-2 border-[#F1F5F9] transition-transform hover:scale-105" style={{ backgroundColor: color }} />
                         ))}
                     </div>
-                    <p className="mt-4 text-sm text-slate-500 italic flex gap-2">
-                        <Info size={16} className="shrink-0 text-slate-400" />
-                        Use these as your base foundation instead of generic black or white.
-                    </p>
+                    <div className="mt-6 p-4 bg-slate-50 rounded-2xl flex gap-3 items-center">
+                        <Info size={20} className="shrink-0 text-blue-600" />
+                        <p className="text-sm text-[#475569] font-bold italic leading-relaxed">
+                            Use these as your base foundation instead of generic black or white.
+                        </p>
+                    </div>
                 </div>
             </section>
 
             {/* 4. Avoid Colors */}
             <section>
-                <h3 className="font-poppins font-bold text-lg text-slate-900 mb-4">Colors to Style Carefully</h3>
-                <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100">
-                    <div className="flex gap-4 overflow-x-auto scrollbar-none pb-4">
+                <h3 className="font-poppins font-bold text-xl text-[#1C1A2E] mb-6">Colors to Style Carefully</h3>
+                <div className="bg-rose-50/50 p-8 rounded-[32px] border border-rose-100">
+                    <div className="flex gap-4 overflow-x-auto scrollbar-none pb-6">
                         {seasonData.avoid.map((color, i) => (
-                            <div key={i} className="w-12 h-12 shrink-0 rounded-full shadow-sm border-2 border-white ring-2 ring-rose-100" style={{ backgroundColor: color }} />
+                            <div key={i} className="w-16 h-16 shrink-0 rounded-full shadow-md border-4 border-white ring-2 ring-rose-100/50" style={{ backgroundColor: color }} />
                         ))}
                     </div>
-                    <div className="flex gap-2 items-start mt-2">
-                        <AlertTriangle size={18} className="text-rose-400 shrink-0 mt-0.5" />
+                    <div className="flex gap-4 items-start bg-white/80 p-5 rounded-2xl border border-rose-100">
+                        <AlertTriangle size={24} className="text-rose-500 shrink-0 mt-0.5" />
                         <div className="space-y-2">
-                            <p className="text-sm font-bold text-rose-700">Not banned, just tricky!</p>
-                            <p className="text-xs text-rose-600 leading-relaxed">
+                            <p className="text-base font-black text-rose-800 tracking-tight">Not banned, just tricky!</p>
+                            <p className="text-sm text-rose-700 leading-relaxed font-medium">
                                 These colors might clash with your natural undertones. Try wearing them away from your face (as pants or shoes) or balancing them with your best colors.
                             </p>
                         </div>
@@ -100,14 +104,14 @@ export default function MyColorsTab({ pca, items }: MyColorsTabProps) {
 
             {/* 5. Quick Tips */}
             <section>
-                <h3 className="font-poppins font-bold text-lg text-slate-900 mb-4">Styling Tips</h3>
-                <div className="grid md:grid-cols-2 gap-4">
+                <h3 className="font-poppins font-bold text-xl text-[#1C1A2E] mb-6">Styling Tips</h3>
+                <div className="grid md:grid-cols-2 gap-6">
                     {seasonData.tips.map((tip, i) => (
-                        <div key={i} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex gap-3 items-start">
-                            <div className="w-6 h-6 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-xs shrink-0">
+                        <div key={i} className="bg-white p-6 rounded-[24px] border border-[#E2E8F0] shadow-sm flex gap-4 items-start hover:border-purple-200 transition-colors">
+                            <div className="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-lg shadow-purple-100">
                                 {i + 1}
                             </div>
-                            <p className="text-sm text-slate-700 font-medium leading-relaxed">{tip}</p>
+                            <p className="text-sm text-[#334155] font-bold leading-relaxed">{tip}</p>
                         </div>
                     ))}
                 </div>

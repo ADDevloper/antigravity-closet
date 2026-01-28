@@ -185,18 +185,18 @@ export default function PCAOnboarding() {
     );
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-[#F2F2F7] flex items-center justify-center p-4">
             <div className="w-full max-w-3xl">
                 {/* Welcome, Quiz, Selfie, Analyzing Steps - Same as before but wrapped in max-w-3xl */}
                 {step === 'welcome' && (
-                    <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12 text-center space-y-6 animate-fade-in">
+                    <div className="bg-white/60 backdrop-blur-xl rounded-[32px] border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.06)] p-8 md:p-12 text-center space-y-6 animate-fade-in">
                         <div className="w-20 h-20 mx-auto bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
                             <Palette className="w-10 h-10 text-white" />
                         </div>
 
-                        <h1 className="font-poppins font-bold text-4xl md:text-5xl text-slate-900">
+                        <h1 className="font-bold text-4xl md:text-5xl text-[#1C1A2E] tracking-tight">
                             Discover Your <br />
-                            <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                            <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
                                 Personal Colors
                             </span>
                         </h1>
@@ -206,19 +206,19 @@ export default function PCAOnboarding() {
                             Takes just 3 minutes!
                         </p>
 
-                        <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6 space-y-4">
-                            <h3 className="font-semibold text-slate-800">What you'll do:</h3>
+                        <div className="bg-white/40 rounded-2xl p-6 space-y-4 border border-white/40">
+                            <h3 className="font-bold text-[#1C1A2E]">What you'll do:</h3>
                             <div className="space-y-3 text-left">
                                 {[
-                                    { icon: '📝', text: 'Answer 8 quick questions' },
-                                    { icon: '📸', text: 'Take a selfie in natural light' },
-                                    { icon: '✨', text: 'Get your personalized color palette' }
+                                    { icon: <Palette size={18} className="text-purple-500" />, text: 'Answer 8 quick questions' },
+                                    { icon: <Camera size={18} className="text-indigo-500" />, text: 'Take a selfie in natural light' },
+                                    { icon: <Sparkles size={18} className="text-amber-500" />, text: 'Get your personalized color palette' }
                                 ].map((item, i) => (
                                     <div key={i} className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-xl">
+                                        <div className="w-10 h-10 rounded-full bg-white/60 flex items-center justify-center">
                                             {item.icon}
                                         </div>
-                                        <span className="text-slate-700">{item.text}</span>
+                                        <span className="text-[#1C1A2E] font-medium">{item.text}</span>
                                     </div>
                                 ))}
                             </div>
@@ -226,7 +226,7 @@ export default function PCAOnboarding() {
 
                         <button
                             onClick={() => setStep('quiz')}
-                            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold py-4 px-8 rounded-xl hover:shadow-lg hover:scale-105 transition-all flex items-center justify-center gap-2"
+                            className="w-full bg-[#1C1A2E] text-white font-bold py-4 px-8 rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
                         >
                             Let's Start!
                             <ArrowRight className="w-5 h-5" />

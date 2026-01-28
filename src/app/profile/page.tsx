@@ -101,7 +101,7 @@ function ProfileContent() {
 
     return (
         <>
-            <div className="pb-12 animate-in fade-in">
+            <div className="pb-12 animate-in fade-in lg:pl-10">
                 <ProfileHeader
                     user={user}
                     pca={pca}
@@ -111,7 +111,7 @@ function ProfileContent() {
                 />
 
                 {/* Tab Navigation */}
-                <div className="flex items-center gap-2 mb-6 bg-white p-1.5 rounded-2xl border border-slate-100 shadow-sm w-full md:w-fit mx-auto md:mx-0 overflow-x-auto">
+                <div className="flex items-center gap-2 mb-8 bg-white/80 backdrop-blur-xl p-2 rounded-[24px] border border-[#E2E8F0] shadow-[0_4px_20px_rgba(0,0,0,0.06)] w-full md:w-fit mx-auto md:mx-0 overflow-x-auto">
                     {[
                         { id: 'profile', label: 'Profile', icon: User },
                         { id: 'colors', label: 'My Colors', icon: Palette },
@@ -123,12 +123,12 @@ function ProfileContent() {
                             <button
                                 key={tab.id}
                                 onClick={() => handleTabChange(tab.id as any)}
-                                className={`flex-1 md:flex-initial flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${isActive
-                                    ? 'bg-purple-600 text-white shadow-md'
-                                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                                className={`flex-1 md:flex-initial flex items-center justify-center gap-2 px-8 py-3 rounded-2xl text-sm font-bold transition-all whitespace-nowrap ${isActive
+                                    ? 'bg-purple-600 text-white shadow-lg shadow-purple-100'
+                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                                     }`}
                             >
-                                <Icon size={16} />
+                                <Icon size={18} />
                                 {tab.label}
                             </button>
                         );

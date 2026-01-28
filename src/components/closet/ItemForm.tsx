@@ -45,6 +45,7 @@ export default function ItemForm({ item, onSave, onClose }: ItemFormProps) {
     const [seasons, setSeasons] = useState<string[]>(item?.seasons || []);
     const [brand, setBrand] = useState(item?.brand || "");
     const [size, setSize] = useState(item?.size || "");
+    const [newColor, setNewColor] = useState("");
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const dropRef = useRef<HTMLDivElement>(null);
@@ -240,7 +241,7 @@ export default function ItemForm({ item, onSave, onClose }: ItemFormProps) {
                                             type="text"
                                             value={category}
                                             onChange={e => setCategory(e.target.value)}
-                                            className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-purple-500/5 focus:border-purple-500 transition-all font-semibold"
+                                            className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-purple-500/5 focus:border-purple-500 transition-all font-normal"
                                             placeholder="Shirt, Pants, etc."
                                         />
                                     </div>
@@ -250,9 +251,63 @@ export default function ItemForm({ item, onSave, onClose }: ItemFormProps) {
                                             type="text"
                                             value={brand}
                                             onChange={e => setBrand(e.target.value)}
-                                            className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-purple-500/5 focus:border-purple-500 transition-all font-semibold"
+                                            className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-purple-500/5 focus:border-purple-500 transition-all font-normal"
                                             placeholder="Zara, Nike, etc."
                                         />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Colors</label>
+                                        <div className="flex flex-wrap gap-2 mb-3">
+                                            {colors.map((color, index) => (
+                                                <div
+                                                    key={index}
+                                                    className="flex items-center gap-2 px-3 py-1.5 bg-white border-2 border-slate-100 rounded-xl group"
+                                                >
+                                                    <div
+                                                        className="w-3 h-3 rounded-full shadow-sm ring-1 ring-slate-200"
+                                                        style={{ backgroundColor: color }}
+                                                    />
+                                                    <span className="text-[11px] font-bold text-slate-600 capitalize">{color}</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setColors(colors.filter((_, i) => i !== index))}
+                                                        className="text-slate-400 hover:text-rose-500 transition-colors"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={newColor}
+                                                onChange={e => setNewColor(e.target.value)}
+                                                onKeyDown={e => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        if (newColor.trim()) {
+                                                            setColors([...colors, newColor.trim()]);
+                                                            setNewColor("");
+                                                        }
+                                                    }
+                                                }}
+                                                className="flex-1 px-4 py-2 bg-slate-50 border-2 border-slate-100 rounded-xl focus:outline-none focus:border-purple-500 transition-all text-sm"
+                                                placeholder="Add color (e.g. Navy, #000080)"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (newColor.trim()) {
+                                                        setColors([...colors, newColor.trim()]);
+                                                        setNewColor("");
+                                                    }
+                                                }}
+                                                className="p-2 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 transition-colors"
+                                            >
+                                                <PlusCircle size={20} />
+                                            </button>
+                                        </div>
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Size</label>
@@ -349,10 +404,19 @@ export default function ItemForm({ item, onSave, onClose }: ItemFormProps) {
 
                                         {/* Summary metadata preview if complete */}
                                         {q.status === 'complete' && q.analysis && (
-                                            <div className="absolute top-2 left-2 right-2 flex gap-1 overflow-hidden">
+                                            <div className="absolute top-2 left-2 right-2 flex flex-wrap gap-1 overflow-hidden">
                                                 <span className="text-[8px] bg-white/90 backdrop-blur-sm px-1.5 py-0.5 rounded-md font-bold text-slate-700 shadow-sm truncate">
                                                     {q.analysis.category}
                                                 </span>
+                                                <div className="flex gap-1 ml-auto">
+                                                    {q.analysis.colors.slice(0, 3).map((c, i) => (
+                                                        <div
+                                                            key={i}
+                                                            className="w-2 h-2 rounded-full border border-white/50 shadow-[0_0_2px_rgba(0,0,0,0.2)]"
+                                                            style={{ backgroundColor: c }}
+                                                        />
+                                                    ))}
+                                                </div>
                                             </div>
                                         )}
 

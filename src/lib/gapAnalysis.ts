@@ -1,4 +1,4 @@
-import { ClothingItem, UserProfile, Lifestyle } from './db';
+import { ClothingItem, UserProfile } from './db';
 
 export interface ClosetSnapshot {
     totalItems: number;

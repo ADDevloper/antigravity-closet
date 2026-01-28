@@ -1,7 +1,6 @@
-"use client";
-
 import { ClothingItem } from "@/lib/db";
-import { Edit2, Trash2 } from "lucide-react";
+import { MoreVertical, Edit2, Trash2 } from "lucide-react";
+import { useState } from "react";
 
 interface ItemCardProps {
     item: ClothingItem;
@@ -11,82 +10,94 @@ interface ItemCardProps {
 }
 
 export default function ItemCard({ item, onEdit, onDelete, inPalette }: ItemCardProps) {
+    const [showMenu, setShowMenu] = useState(false);
+
     return (
-        <div className="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100">
-            <div className="aspect-[4/5] relative overflow-hidden">
+        <div className="group bg-white rounded-[32px] overflow-hidden border border-[#F1F5F9] shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.06)] transition-all duration-500 mb-6 break-inside-avoid relative">
+            {/* Palette Badge */}
+            {inPalette && (
+                <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur-md text-[#7C3AED] w-8 h-8 rounded-full shadow-sm flex items-center justify-center animate-fade-in border border-purple-50">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+                    </svg>
+                </div>
+            )}
+
+            {/* Image Section */}
+            <div className="relative aspect-[3/4] overflow-hidden bg-[#F8FAFC]">
                 <img
                     src={item.image}
                     alt={item.category}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
-
-                {inPalette && (
-                    <div className="absolute top-2 right-2 bg-emerald-500 text-white p-1.5 rounded-full shadow-md flex items-center justify-center" title="In your color palette">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    </div>
-                )}
-
-                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    {onEdit && (
-                        <button
-                            onClick={() => onEdit(item)}
-                            className="p-2 bg-white rounded-full text-slate-800 hover:bg-purple-50 transition-colors"
-                        >
-                            <Edit2 size={18} />
-                        </button>
-                    )}
-                    {onDelete && item.id && (
-                        <button
-                            onClick={() => onDelete(item.id!)}
-                            className="p-2 bg-white rounded-full text-rose-500 hover:bg-rose-50 transition-colors"
-                        >
-                            <Trash2 size={18} />
-                        </button>
-                    )}
-                </div>
             </div>
 
-            <div className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                    <div>
-                        <h3 className="font-poppins font-bold text-sm capitalize text-slate-900">{item.category}</h3>
-                        {item.brand && (
-                            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{item.brand}</p>
-                        )}
+            {/* Content Section */}
+            <div className="p-6">
+                <div className="flex justify-between items-start gap-4">
+                    <div className="space-y-1.5 flex-1">
+                        <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-[0.15em]">
+                            {item.category}
+                        </p>
+                        <h3 className="text-[16px] font-semibold text-[#1C1A2E] leading-snug">
+                            {item.brand ? `${item.brand} ${item.category}` : `Essential ${item.category}`}
+                        </h3>
                     </div>
-                    <div className="flex gap-1 items-center">
-                        {item.size && (
-                            <span className="text-[10px] bg-purple-50 text-purple-600 px-2 py-0.5 rounded-lg border border-purple-100 font-bold mr-1">
-                                {item.size}
-                            </span>
-                        )}
-                        <div className="flex gap-1">
-                            {item.colors.slice(0, 3).map((color, i) => (
+
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowMenu(!showMenu)}
+                            className="p-1.5 text-[#CBD5E1] hover:text-[#64748B] transition-colors rounded-lg hover:bg-[#F8FAFC]"
+                        >
+                            <MoreVertical size={20} />
+                        </button>
+
+                        {showMenu && (
+                            <>
                                 <div
-                                    key={i}
-                                    className="w-3 h-3 rounded-full border border-slate-200 shadow-sm"
-                                    style={{ backgroundColor: color }}
-                                    title={color}
+                                    className="fixed inset-0 z-20"
+                                    onClick={() => setShowMenu(false)}
                                 />
-                            ))}
-                        </div>
+                                <div className="absolute right-0 bottom-full mb-2 w-36 bg-white rounded-2xl shadow-xl border border-[#F1F5F9] py-2 z-30 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                    {onEdit && (
+                                        <button
+                                            onClick={() => { onEdit(item); setShowMenu(false); }}
+                                            className="w-full px-4 py-2.5 text-left text-[13px] font-semibold text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#7C3AED] flex items-center gap-2.5 transition-colors"
+                                        >
+                                            <Edit2 size={14} /> Edit Piece
+                                        </button>
+                                    )}
+                                    {onDelete && item.id && (
+                                        <button
+                                            onClick={() => { onDelete(item.id!); setShowMenu(false); }}
+                                            className="w-full px-4 py-2.5 text-left text-[13px] font-semibold text-[#EF4444] hover:bg-rose-50 flex items-center gap-2.5 transition-colors"
+                                        >
+                                            <Trash2 size={14} /> Remove
+                                        </button>
+                                    )}
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
-                <div className="flex flex-wrap gap-1 mt-3">
-                    {item.occasions.map(occ => (
-                        <span key={occ} className="text-[9px] bg-slate-50 text-slate-500 px-2 py-0.5 rounded-md border border-slate-100 capitalize font-medium">
-                            {occ}
-                        </span>
+
+                {/* Optional Dots for color/size if they exist */}
+                <div className="mt-4 flex items-center gap-3">
+                    {item.colors.slice(0, 3).map((color, i) => (
+                        <div
+                            key={i}
+                            className="w-2.5 h-2.5 rounded-full ring-1 ring-[#F1F5F9] shadow-sm"
+                            style={{ backgroundColor: color }}
+                        />
                     ))}
-                    {item.seasons.map(season => (
-                        <span key={season} className="text-[9px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-md border border-amber-100 capitalize font-bold">
-                            {season}
+                    {item.size && (
+                        <span className="text-[10px] font-bold text-[#94A3B8] ml-auto border border-[#F1F5F9] px-2 py-0.5 rounded-md">
+                            {item.size}
                         </span>
-                    ))}
+                    )}
                 </div>
             </div>
         </div>
     );
 }
+

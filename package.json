@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "^2.93.1",
     "color-diff": "^1.4.0",
     "compressorjs": "^1.2.1",
     "date-fns": "^4.1.0",

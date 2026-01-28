@@ -1,6 +1,5 @@
-import { ClothingItem, Outfit, getUserPreferences, UserProfile } from './db';
+import { ClothingItem, Outfit, getUserPreferences, UserProfile, PCAProfile, Recommendation } from './db';
 import { ClosetSnapshot, createGapAnalysisPrompt } from './gapAnalysis';
-import { FASHION_KNOWLEDGE } from './fashionKnowledge';
 
 const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
 const VERTEX_PROJECT_ID = process.env.NEXT_PUBLIC_VERTEX_PROJECT_ID || '';
@@ -8,8 +7,8 @@ const VERTEX_LOCATION = process.env.NEXT_PUBLIC_VERTEX_LOCATION || 'us-central1'
 
 // Native Gemini File Search URIs (Uploaded Knowledge Bases)
 // Update these URIs whenever you run `node src/scripts/upload-knowledge.js`
-const GLOBAL_KNOWLEDGE_URI = 'https://generativelanguage.googleapis.com/v1beta/files/etkj0ok086b7';
-const INDIAN_KNOWLEDGE_URI = 'https://generativelanguage.googleapis.com/v1beta/files/xzld3llnjcmk';
+const GLOBAL_KNOWLEDGE_URI = 'https://generativelanguage.googleapis.com/v1beta/files/o9930p4naiwf';
+const INDIAN_KNOWLEDGE_URI = 'https://generativelanguage.googleapis.com/v1beta/files/gcdexmd6320l';
 
 // Use v1beta for native File API support
 const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -19,11 +18,12 @@ export async function analyzeClothingImage(apiKey: string = API_KEY, base64Image
     const prompt = `
     Analyze this clothing item and return a JSON object with:
     - category: (choose from: shirt, pants, dress, shoes, jacket, accessories, skirt, sweater, activewear)
-    - colors: array of main colors
+    - colors: array of main colors (use standard CSS color names or hex codes like #FFFFFF)
     - suggestedOccasions: array (choose from: casual, formal, business, party, gym, beach, date night, everyday)
     - suggestedSeasons: array (choose from: spring, summer, fall, winter, all-season)
     - brand: detected brand (or null if not clearly visible)
 
+    For colors, provide simple names (e.g., "blue", "navy", "dark gray") that can be used for filtering.
     Be very specific about seasons based on fabric and style.
     Return ONLY the JSON.
   `;
@@ -70,7 +70,7 @@ export async function analyzeClothingImage(apiKey: string = API_KEY, base64Image
         try {
             const jsonStr = text.match(/\{[\s\S]*\}/)?.[0] || text;
             return JSON.parse(jsonStr);
-        } catch (e) {
+        } catch {
             console.error('Failed to parse Gemini response', text);
             return null;
         }
@@ -81,10 +81,10 @@ export async function analyzeClothingImage(apiKey: string = API_KEY, base64Image
 }
 
 // Vertex AI implementation (requires OAuth or service account)
-async function analyzeClothingImageVertex(base64Image: string) {
+async function analyzeClothingImageVertex(_base64Image: string) {
     // Note: Vertex AI requires proper authentication which is complex in browser
     // This is a placeholder showing the endpoint structure
-    const url = `https://${VERTEX_LOCATION}-aiplatform.googleapis.com/v1/projects/${VERTEX_PROJECT_ID}/locations/${VERTEX_LOCATION}/publishers/google/models/gemini-1.5-flash:generateContent`;
+    const _url = `https://${VERTEX_LOCATION}-aiplatform.googleapis.com/v1/projects/${VERTEX_PROJECT_ID}/locations/${VERTEX_LOCATION}/publishers/google/models/gemini-1.5-flash:generateContent`;
 
     console.warn('Vertex AI requires service account authentication which cannot be done securely from the browser.');
     console.warn('Please use Google AI Studio API key instead, or implement a backend proxy.');
@@ -97,7 +97,7 @@ export async function getFashionAdvice(
     closet: ClothingItem[],
     history: { role: 'user' | 'assistant'; content: string }[],
     userInput: string,
-    pcaProfile?: any, // PCAProfile from db.ts
+    pcaProfile?: PCAProfile, // PCAProfile from db.ts
     userProfile?: UserProfile | null
 ) {
     const url = `${BASE_URL}/gemini-2.5-flash:generateContent?key=${apiKey}`;
@@ -246,7 +246,7 @@ export async function getFashionAdvice(
     Current user request: ${userInput}
   `;
 
-    const contents = history.map(h => ({
+    const contents: Array<{ role: string; parts: Array<{ text?: string; file_data?: { mime_type: string; file_uri: string } }> }> = history.map(h => ({
         role: h.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: h.content }]
     }));
@@ -269,9 +269,9 @@ export async function getFashionAdvice(
             },
             { text: systemPrompt }
         ]
-    } as any);
+    });
 
-    const requestBody: any = {
+    const requestBody = {
         contents: contents
     };
 
@@ -302,39 +302,78 @@ export async function getFashionAdvice(
         const data = await response.json();
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-        // Extract outfits and recommendations from text
-        const outfits: Outfit[] = [];
-        const recommendations: any[] = [];
-        const outfitRegex = /\[OUTFIT: (\{.*?\})\]/g;
-        const recoRegex = /\[RECO: (\{.*?\})\]/g;
-        let match;
         let cleanText = text;
 
-        while ((match = outfitRegex.exec(text)) !== null) {
-            try {
-                const outfitData = JSON.parse(match[1]);
-                outfits.push({
-                    ...outfitData,
-                    id: Math.random().toString(36).substr(2, 9),
-                });
-                cleanText = cleanText.replace(match[0], '');
-            } catch (e) {
-                console.error('Failed to parse outfit', match[1]);
-            }
-        }
+        // Helper to extract balanced JSON from tags like [OUTFIT: {...}] or [RECO: {...}]
+        const extractTags = (tag: string) => {
+            const startMarker = `[${tag}: `;
+            let searchIndex = 0;
+            const results: any[] = [];
 
-        while ((match = recoRegex.exec(text)) !== null) {
-            try {
-                const recoData = JSON.parse(match[1]);
-                recommendations.push({
-                    ...recoData,
-                    id: Math.random().toString(36).substr(2, 9),
-                });
-                cleanText = cleanText.replace(match[0], '');
-            } catch (e) {
-                console.error('Failed to parse recommendation', match[1]);
+            while (true) {
+                const startIndex = text.indexOf(startMarker, searchIndex);
+                if (startIndex === -1) break;
+
+                const jsonStart = startIndex + startMarker.length;
+                let depth = 0;
+                let jsonEnd = -1;
+
+                for (let i = jsonStart; i < text.length; i++) {
+                    if (text[i] === '{' || text[i] === '[') depth++;
+                    if (text[i] === '}' || text[i] === ']') depth--;
+
+                    // We are looking for the closing ']' of the tag [TAG: {...}]
+                    // Since depth tracks all brackets, depth -1 means we found the tag's closing ']'
+                    if (depth === -1 && text[i] === ']') {
+                        jsonEnd = i;
+                        break;
+                    }
+                }
+
+                if (jsonEnd !== -1) {
+                    const fullTagMatch = text.substring(startIndex, jsonEnd + 1);
+                    const jsonStr = text.substring(jsonStart, jsonEnd).trim();
+
+                    try {
+                        // Clean up markdown markers if AI included them: [OUTFIT: ```json ... ```]
+                        const cleanJsonStr = jsonStr
+                            .replace(/^```json\s*/, '')
+                            .replace(/^```\s*/, '')
+                            .replace(/```$/, '')
+                            .trim();
+
+                        const data = JSON.parse(cleanJsonStr);
+                        results.push({ data, raw: fullTagMatch });
+                    } catch (e) {
+                        console.error(`Failed to parse ${tag}`, jsonStr);
+                    }
+                    searchIndex = jsonEnd + 1;
+                } else {
+                    break;
+                }
             }
-        }
+            return results;
+        };
+
+        const outfitMatches = extractTags('OUTFIT');
+        const outfits: Outfit[] = outfitMatches.map(m => {
+            const outfitData = m.data;
+            cleanText = cleanText.replace(m.raw, '');
+            return {
+                ...outfitData,
+                id: Math.random().toString(36).substr(2, 9),
+            };
+        });
+
+        const recoMatches = extractTags('RECO');
+        const recommendations: Recommendation[] = recoMatches.map(m => {
+            const recoData = m.data;
+            cleanText = cleanText.replace(m.raw, '');
+            return {
+                ...recoData,
+                id: Math.random().toString(36).substr(2, 9),
+            };
+        });
 
         return {
             content: cleanText.trim(),
@@ -427,7 +466,7 @@ Return ONLY valid JSON, no markdown formatting.`;
         try {
             const jsonStr = text.match(/\{[\s\S]*\}/)?.[0] || text;
             return JSON.parse(jsonStr);
-        } catch (e) {
+        } catch {
             console.error('Failed to parse Gemini PCA response', text);
             return null;
         }
@@ -480,7 +519,7 @@ export async function performGapAnalysis(
         try {
             const jsonStr = text.match(/\{[\s\S]*\}/)?.[0] || text;
             return JSON.parse(jsonStr);
-        } catch (e) {
+        } catch {
             console.error('Failed to parse Gap Analysis response', text);
             return null;
         }

@@ -1,4 +1,6 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
+import { supabase } from './supabase';
+import { base64ToBlob } from './utils';
 
 export interface ClothingItem {
   id?: number;
@@ -219,6 +221,39 @@ const DB_VERSION = 4; // Increment version for ratings & preferences
 
 let dbPromise: Promise<IDBPDatabase<ClosetDB>> | null = null;
 
+/** 
+ * Cloud Storage Utilities
+ */
+
+async function uploadToSupabase(file: Blob | string, path: string): Promise<string | null> {
+  try {
+    const blob = typeof file === 'string' ? base64ToBlob(file) : file;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return null;
+
+    const userId = session.user.id;
+    const fileName = `${userId}/${path}-${Date.now()}.png`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('closet-images')
+      .upload(fileName, blob, {
+        contentType: 'image/png',
+        upsert: true
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('closet-images')
+      .getPublicUrl(fileName);
+
+    return publicUrl;
+  } catch (error) {
+    console.error('Upload failed:', error);
+    return null;
+  }
+}
+
 export const getDB = () => {
   if (typeof window === 'undefined') return null;
   if (!dbPromise) {
@@ -293,24 +328,132 @@ export const getDB = () => {
 
 export const addItem = async (item: ClothingItem) => {
   const db = await getDB();
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (session) {
+    try {
+      // 1. Upload image if it's base64 (newly captured)
+      let imageUrl = item.image;
+      if (item.image.startsWith('data:')) {
+        const uploadedUrl = await uploadToSupabase(item.image, 'item');
+        if (uploadedUrl) imageUrl = uploadedUrl;
+      }
+
+      // 2. Save to Supabase
+      const { data, error } = await supabase
+        .from('items')
+        .insert([{
+          user_id: session.user.id,
+          category: item.category,
+          brand: item.brand,
+          size: item.size,
+          colors: item.colors,
+          occasions: item.occasions,
+          seasons: item.seasons,
+          image_url: imageUrl,
+        }])
+        .select();
+
+      if (error) throw error;
+
+      // Update local item with remote ID if needed, but for now we'll keep local IDs separate
+      // or map them. Let's simplify and just save locally with the same metadata.
+      if (db) {
+        await db.add('items', { ...item, image: imageUrl });
+      }
+      return data;
+    } catch (err) {
+      console.error('Cloud save failed, falling back to local:', err);
+    }
+  }
+
+  // Local fallback
   if (!db) return;
   return db.add('items', item);
 };
 
 export const updateItem = async (item: ClothingItem) => {
   const db = await getDB();
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (session && item.id) {
+    try {
+      const { error } = await supabase
+        .from('items')
+        .update({
+          category: item.category,
+          brand: item.brand,
+          size: item.size,
+          colors: item.colors,
+          occasions: item.occasions,
+          seasons: item.seasons,
+          image_url: item.image,
+        })
+        .eq('user_id', session.user.id)
+        .eq('id', item.id); // This assumes ID mapping
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Cloud update failed:', err);
+    }
+  }
+
   if (!db || !item.id) return;
   return db.put('items', item);
 };
 
 export const deleteItem = async (id: number) => {
   const db = await getDB();
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (session) {
+    try {
+      await supabase
+        .from('items')
+        .delete()
+        .eq('user_id', session.user.id)
+        .eq('id', id);
+    } catch (err) {
+      console.error('Cloud delete failed:', err);
+    }
+  }
+
   if (!db) return;
   return db.delete('items', id);
 };
 
-export const getAllItems = async () => {
+export const getAllItems = async (): Promise<ClothingItem[]> => {
   const db = await getDB();
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (session) {
+    try {
+      const { data, error } = await supabase
+        .from('items')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data) {
+        return data.map(dbItem => ({
+          id: dbItem.id,
+          image: dbItem.image_url,
+          category: dbItem.category,
+          brand: dbItem.brand,
+          size: dbItem.size,
+          colors: dbItem.colors,
+          occasions: dbItem.occasions,
+          seasons: dbItem.seasons,
+          createdAt: new Date(dbItem.created_at).getTime(),
+        }));
+      }
+    } catch (err) {
+      console.error('Cloud fetch failed, using local cache:', err);
+    }
+  }
+
   if (!db) return [];
   return db.getAll('items');
 };
@@ -589,5 +732,54 @@ const calculatePreferencesFromRating = async (rating: OutfitRating) => {
   }
 
   await saveUserPreferences(prefs);
+};
+
+export const migrateLocalToCloud = async () => {
+  const db = await getDB();
+  if (!db) return { success: false, message: 'Local DB not found' };
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return { success: false, message: 'User not logged in' };
+
+  try {
+    const localItems = await db.getAll('items');
+    // For migration, we only want to push items that aren't already cloud-indexed 
+    // (a simple check for now: if image is base64, it's definitely local-only)
+    const itemsToMigrate = localItems.filter(item => item.image.startsWith('data:'));
+
+    if (itemsToMigrate.length === 0) return { success: true, message: 'Already synced' };
+
+    let count = 0;
+    for (const item of itemsToMigrate) {
+      // 1. Upload image to cloud
+      const cloudUrl = await uploadToSupabase(item.image, 'migrated');
+      if (cloudUrl) {
+        // 2. Save items record to cloud
+        const { error } = await supabase
+          .from('items')
+          .insert([{
+            user_id: session.user.id,
+            category: item.category,
+            brand: item.brand,
+            size: item.size,
+            colors: item.colors,
+            occasions: item.occasions,
+            seasons: item.seasons,
+            image_url: cloudUrl,
+          }]);
+
+        if (!error) {
+          // 3. Update local record to use cloud URL (prevents re-migration)
+          await db.put('items', { ...item, image: cloudUrl });
+          count++;
+        }
+      }
+    }
+
+    return { success: true, count };
+  } catch (error) {
+    console.error('Migration failed:', error);
+    return { success: false, error };
+  }
 };
 

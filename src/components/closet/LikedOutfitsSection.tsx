@@ -140,7 +140,7 @@ function LikedOutfitCard({
                                 type="date"
                                 value={scheduleDate}
                                 onChange={e => setScheduleDate(e.target.value)}
-                                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:border-purple-500 transition-all"
+                                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-normal text-slate-700 focus:outline-none focus:border-purple-500 transition-all"
                             />
                         </div>
                         <div className="flex gap-2">
@@ -292,7 +292,7 @@ function LikedOutfitCard({
                                                 type="date"
                                                 value={scheduleDate}
                                                 onChange={e => setScheduleDate(e.target.value)}
-                                                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:border-purple-500 transition-all"
+                                                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-normal text-slate-700 focus:outline-none focus:border-purple-500 transition-all"
                                             />
                                         </div>
                                         <button
